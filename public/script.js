@@ -890,12 +890,194 @@ let currentModifier =
   "NONE";
 
 
+// ========================================================
+// CAREER LEVEL + MID-RUN POWER SYSTEMS
+// ========================================================
+
+let lastKnownCareerLevel = 1;
+let overdriveCharge = 0;
+let overdriveActive = false;
+let overdriveTimer = null;
+let battleDropTimer = null;
+let bountyBoostUntil = 0;
+let rapidFireUntil = 0;
+
+const careerTags = [
+  { level: 1, name: "ROOKIE", icon: "⌨️" },
+  { level: 5, name: "KEY CADET", icon: "🟦" },
+  { level: 10, name: "SHARP SHOOTER", icon: "🎯" },
+  { level: 20, name: "WAVE HUNTER", icon: "🌊" },
+  { level: 30, name: "ELITE OPERATOR", icon: "⚡" },
+  { level: 45, name: "VOID ACE", icon: "🌌" },
+  { level: 60, name: "KEYBOARD LEGEND", icon: "👑" },
+  { level: 80, name: "GALACTIC MYTH", icon: "🌠" },
+  { level: 100, name: "INVADER REAPER", icon: "💀" },
+  { level: 125, name: "STAR COMMANDER", icon: "🚀" },
+  { level: 160, name: "SINGULARITY", icon: "🕳️" }
+];
+
+function getCareerXP() {
+  return Math.max(0,
+    totalKills * 12 +
+    bestWave * 120 +
+    rebirths * 2500
+  );
+}
+
+function xpForCareerLevel(level) {
+  return Math.floor(120 * Math.pow(Math.max(0, level - 1), 1.45));
+}
+
+function getCareerLevel() {
+  const xp = getCareerXP();
+  let level = 1;
+  while (level < 500 && xp >= xpForCareerLevel(level + 1)) level++;
+  return level;
+}
+
+function getCareerTag(level = getCareerLevel()) {
+  let tag = careerTags[0];
+  for (const candidate of careerTags) {
+    if (level >= candidate.level) tag = candidate;
+    else break;
+  }
+  return tag;
+}
+
+function getCareerProgress() {
+  const xp = getCareerXP();
+  const level = getCareerLevel();
+  const floor = xpForCareerLevel(level);
+  const ceiling = xpForCareerLevel(level + 1);
+  return {
+    xp, level,
+    current: Math.max(0, xp - floor),
+    needed: Math.max(1, ceiling - floor),
+    percent: clamp((xp - floor) / Math.max(1, ceiling - floor) * 100, 0, 100),
+    tag: getCareerTag(level)
+  };
+}
+
+function checkCareerLevelUp() {
+  const now = getCareerLevel();
+  if (now > lastKnownCareerLevel) {
+    const tag = getCareerTag(now);
+    showGameNotification(
+      `⬆ LEVEL ${now}!`,
+      `${tag.icon} ${tag.name} — new nametag reached!`,
+      "quest"
+    );
+    showAnnouncement(`LEVEL ${now}`, `${tag.icon} ${tag.name}`, 3000);
+    playSuccessSound();
+    flashyPulse("upgrade");
+  }
+  lastKnownCareerLevel = now;
+}
+
+function addOverdrive(amount) {
+  if (!running || overdriveActive) return;
+  overdriveCharge = clamp(overdriveCharge + amount, 0, 100);
+  if (overdriveCharge >= 100) activateOverdrive();
+}
+
+function activateOverdrive() {
+  if (!running || overdriveActive) return;
+  overdriveActive = true;
+  overdriveCharge = 100;
+  document.body.classList.add("overdrive-active");
+  showAnnouncement("⚡ OVERDRIVE ⚡", "2X DAMAGE • LOW HEAT • BONUS CASH", 3200);
+  tone(160, .22, "sawtooth", .025, 720);
+  particles(arena.clientWidth / 2, arena.clientHeight * .72, 36, "spark");
+  clearTimeout(overdriveTimer);
+  overdriveTimer = setTimeout(() => {
+    overdriveActive = false;
+    overdriveCharge = 0;
+    document.body.classList.remove("overdrive-active");
+    showGameNotification("OVERDRIVE ENDED", "Charge it again with kills and combos.", "info");
+    updateHUD();
+  }, 8500);
+  updateHUD();
+}
+
+const battleDropTypes = [
+  { id: "coolant", icon: "❄️", name: "COOLANT", text: "HEAT RESET", className: "drop-coolant" },
+  { id: "shield", icon: "🛡️", name: "SHIELD PACK", text: "+35% SHIELD", className: "drop-shield" },
+  { id: "emp", icon: "💥", name: "EMP", text: "DAMAGE ALL ENEMIES", className: "drop-emp" },
+  { id: "bounty", icon: "🪙", name: "BOUNTY CHIP", text: "2X CASH FOR 12S", className: "drop-bounty" },
+  { id: "rapid", icon: "⚡", name: "TURBO CORE", text: "LESS HEAT + SPEED", className: "drop-rapid" }
+];
+
+function scheduleBattleDrop() {
+  clearTimeout(battleDropTimer);
+  if (!running) return;
+  battleDropTimer = setTimeout(() => {
+    if (running && !waveChanging) spawnBattleDrop();
+    scheduleBattleDrop();
+  }, 12000 + Math.random() * 11000);
+}
+
+function spawnBattleDrop() {
+  const data = randomItem(battleDropTypes);
+  const drop = document.createElement("button");
+  drop.type = "button";
+  drop.className = `battle-drop ${data.className}`;
+  drop.innerHTML = `<span>${data.icon}</span><b>${data.name}</b><small>${data.text}</small>`;
+  drop.style.left = `${10 + Math.random() * 75}%`;
+  drop.style.top = `${18 + Math.random() * 46}%`;
+  arena.appendChild(drop);
+  tone(520, .08, "sine", .012, 760);
+
+  const expire = setTimeout(() => drop.remove(), 8000);
+  drop.addEventListener("click", () => {
+    clearTimeout(expire);
+    applyBattleDrop(data.id);
+    drop.classList.add("claimed");
+    setTimeout(() => drop.remove(), 260);
+  }, { once: true });
+}
+
+function applyBattleDrop(id) {
+  if (id === "coolant") {
+    heat = 0;
+    overheated = false;
+    document.getElementById("overheat-warning")?.classList.remove("show");
+  }
+  else if (id === "shield") {
+    health = Math.min(maxHealth, health + maxHealth * .35);
+  }
+  else if (id === "emp") {
+    [...enemies].forEach(enemy => {
+      if (!enemies.includes(enemy)) return;
+      enemy.hp -= enemy.maxHp * (enemy.boss ? .14 : .55);
+      combatText(enemy.x + 35, enemy.y + 20, "EMP!", "special-text");
+      if (enemy.hp <= 0) killEnemy(enemy);
+      else updateEnemyUI(enemy);
+    });
+  }
+  else if (id === "bounty") {
+    bountyBoostUntil = performance.now() + 12000;
+  }
+  else if (id === "rapid") {
+    rapidFireUntil = performance.now() + 10000;
+  }
+
+  const data = battleDropTypes.find(item => item.id === id);
+  showGameNotification(`${data?.icon || "🎁"} ${data?.name || "DROP"} CLAIMED!`, data?.text || "POWER UP!", "quest");
+  flashyPulse("upgrade");
+  particles(arena.clientWidth / 2, arena.clientHeight * .55, 22, "spark");
+  updateHUD();
+}
+
+
 const modifierInfo = {
   NONE: { name: "NORMAL WAVE", text: "NO EXTRA EFFECTS THIS WAVE." },
   SWARM: { name: "BIG WAVE", text: "A LOT MORE ENEMIES WILL SPAWN." },
   FAST: { name: "SPEED WAVE", text: "ENEMIES MOVE 65% FASTER." },
   ARMORED: { name: "POWER WAVE", text: "ENEMIES HAVE 125% MORE HEALTH." },
   BOUNTY: { name: "RICH WAVE", text: "ENEMIES GIVE 3X COINS." },
+  GLASS: { name: "GLASS CANNON", text: "YOU AND ENEMIES HIT MUCH HARDER." },
+  REGEN: { name: "REGEN WAVE", text: "ENEMIES SLOWLY HEAL — FINISH THEM FAST." },
+  BLACKOUT: { name: "BLACKOUT", text: "DARK SECTOR • HIGHER REWARDS • MORE SHOOTERS." },
   CHAOS: { name: "CHAOS WAVE", text: "MORE ENEMIES, MORE HEALTH, MORE SPEED, 2X COINS." }
 };
 
@@ -1818,6 +2000,9 @@ function updateUsernameUI() {
   setCharacter(equipped?.character || selectedCharacter || "astronaut");
   document.getElementById("profile-username").textContent = username || "COMMANDER";
   document.getElementById("game-username").textContent = username || "COMMANDER";
+  const tag = getCareerTag();
+  const gameTag = document.getElementById("game-nametag");
+  if (gameTag) gameTag.textContent = `${tag.icon} ${tag.name}`;
   updateAccountStatus();
 }
 
@@ -4169,19 +4354,7 @@ document
         0;
 
 
-      upgrades = {
-        damage:
-          1,
-
-        bullets:
-          1,
-
-        cooling:
-          1,
-
-        health:
-          1
-      };
+      upgrades = { ...defaultUpgrades };
 
 
       owned = {
@@ -4458,6 +4631,13 @@ function startGame() {
   overheated =
     false;
 
+  overdriveCharge = 0;
+  overdriveActive = false;
+  bountyBoostUntil = 0;
+  rapidFireUntil = 0;
+  document.body.classList.remove("overdrive-active");
+  lastKnownCareerLevel = getCareerLevel();
+
 
   const board =
     keyboards[equipped.keyboard] || keyboards.standard;
@@ -4485,6 +4665,7 @@ function startGame() {
 
 
   scheduleFloatingCoin();
+  scheduleBattleDrop();
 
 
   const difficulty = getDifficulty();
@@ -4755,6 +4936,9 @@ function startWave() {
     "FAST",
     "ARMORED",
     "BOUNTY",
+    "GLASS",
+    "REGEN",
+    "BLACKOUT",
     "CHAOS"
   ];
 
@@ -4773,6 +4957,8 @@ function startWave() {
       )
       :
       "NONE";
+
+  document.body.classList.toggle("blackout-wave", currentModifier === "BLACKOUT");
 
 
   let amount =
@@ -5102,7 +5288,7 @@ function spawnEnemy(
     ||
     (
       Math.random() <
-      difficulty.shooterChance
+      Math.min(0.35, difficulty.shooterChance + (currentModifier === "BLACKOUT" ? 0.12 : 0))
     );
 
 
@@ -5192,6 +5378,13 @@ function spawnEnemy(
 
 
   // RUN DIFFICULTY
+  if (currentModifier === "GLASS") {
+    hp *= 0.58;
+  }
+  if (currentModifier === "REGEN") {
+    hp *= 1.18;
+  }
+
   // Reward multiplier is applied on kill so it also affects drone/upgrades consistently.
   hp *= difficulty.health;
   speed *= difficulty.speed;
@@ -5444,7 +5637,7 @@ function spawnEnemy(
       speed,
 
     damage:
-      base.damage,
+      base.damage * (currentModifier === "GLASS" ? 1.7 : 1),
 
     reward:
       Math.round(
@@ -5479,6 +5672,9 @@ function spawnEnemy(
       performance.now()
       +
       2600,
+
+    nextRegen:
+      performance.now() + 1600,
 
     executionOffered:
       false,
@@ -5760,17 +5956,22 @@ function attemptShoot(
     );
 
 
-  heat +=
-    (
-      7.5 +
-      Math.max(
-        0,
-        upgrades.bullets -
-        1
-      )
-    )
-    *
-    gun.heat;
+  const board = keyboards[equipped.keyboard] || keyboards.standard;
+  const coolingLevel = Math.max(1, Number(upgrades.cooling) || 1);
+  const coolingResistance =
+    1 +
+    Math.max(0, coolingLevel - 1) * 0.085 +
+    Math.sqrt(Math.max(0, coolingLevel - 1)) * 0.035 +
+    Math.max(0, board.cooling || 0) * 0.04;
+
+  let heatGain =
+    (7.5 + Math.max(0, upgrades.bullets - 1)) * gun.heat;
+
+  heatGain /= coolingResistance;
+  if (overdriveActive) heatGain *= 0.38;
+  if (performance.now() < rapidFireUntil) heatGain *= 0.55;
+
+  heat += Math.max(0.35, heatGain);
 
 
   if (
@@ -5947,7 +6148,9 @@ function createBullet(
         1 +
         Math.min(bulletSpeedLevel, 15) * 0.14 +
         Math.sqrt(Math.max(0, bulletSpeedLevel - 15)) * 0.12
-      ),
+      ) *
+      (overdriveActive ? 1.28 : 1) *
+      (performance.now() < rapidFireUntil ? 1.22 : 1),
 
     damage:
       (
@@ -5966,6 +6169,10 @@ function createBullet(
         100 *
         0.25
       )
+      *
+      (overdriveActive ? 2 : 1)
+      *
+      (currentModifier === "GLASS" ? 1.75 : 1)
 
   });
 
@@ -5997,12 +6204,12 @@ setInterval(
       ];
 
 
-    const coolingLevel = Math.max(0, upgrades.cooling);
+    // Cooling upgrade now reduces HEAT GAIN when shooting.
+    // Passive heat decay stays mostly consistent so the stat feels like resistance, not recovery speed.
     const coolingPower =
-      1.4 +
-      coolingLevel * 0.95 +
-      Math.sqrt(coolingLevel) * 0.65 +
-      board.cooling;
+      1.35 +
+      Math.min(1.4, Math.max(0, board.cooling || 0) * 0.10) +
+      (overdriveActive ? 0.9 : 0);
 
     heat -= coolingPower;
 
@@ -6085,10 +6292,7 @@ function triggerOverheat() {
 
     },
 
-    Math.max(
-      280,
-      1450 - upgrades.cooling * 38 - Math.sqrt(upgrades.cooling) * 55
-    )
+    1250
 
   );
 
@@ -6327,6 +6531,20 @@ function moveEnemies() {
 
         );
 
+    }
+
+
+    // wave-wide regeneration modifier
+    if (
+      currentModifier === "REGEN"
+      && enemy.hp > 0
+      && enemy.hp < enemy.maxHp
+      && performance.now() > enemy.nextRegen
+    ) {
+      enemy.nextRegen = performance.now() + 1500;
+      enemy.hp = Math.min(enemy.maxHp, enemy.hp + enemy.maxHp * 0.035);
+      combatText(enemy.x + 20, enemy.y + 10, "+REGEN", "special-text");
+      updateEnemyUI(enemy);
     }
 
 
@@ -7486,6 +7704,10 @@ function killEnemy(
   reward *=
     cashMultiplier();
 
+  if (overdriveActive) reward *= 1.45;
+  if (performance.now() < bountyBoostUntil) reward *= 2;
+  if (currentModifier === "BLACKOUT") reward *= 1.65;
+
 
   // Difficulty cash bonus/penalty
   reward *=
@@ -7507,9 +7729,16 @@ function killEnemy(
 
 
   totalKills++;
+  checkCareerLevelUp();
 
 
   combo++;
+  addOverdrive(5 + Math.min(8, combo * 0.28) + (enemy.boss ? 30 : 0));
+
+  if (combo > 0 && combo % 10 === 0) {
+    showGameNotification(`🔥 ${combo} COMBO!`, "+OVERDRIVE CHARGE", "quest");
+    particles(enemy.x + 45, enemy.y + 45, 20, "spark");
+  }
 
 
   // MUCH BIGGER PARTICLE EFFECT
@@ -8860,8 +9089,11 @@ function checkWaveComplete() {
 
   showAnnouncement(
     "WAVE CLEARED!",
-    `WAVE ${wave}`
+    `WAVE ${wave} • +OVERDRIVE`
   );
+
+  addOverdrive(12);
+  particles(arena.clientWidth / 2, arena.clientHeight * .30, 18, "spark");
 
 
   tone(
@@ -9094,6 +9326,16 @@ function updateHUD() {
     "combo"
   ).textContent =
     combo;
+
+  const career = getCareerProgress();
+  const hudLevel = document.getElementById("game-level");
+  const hudXpFill = document.getElementById("game-xp-fill");
+  const odFill = document.getElementById("overdrive-fill");
+  const odText = document.getElementById("overdrive-text");
+  if (hudLevel) hudLevel.textContent = career.level;
+  if (hudXpFill) hudXpFill.style.width = `${career.percent}%`;
+  if (odFill) odFill.style.width = `${overdriveActive ? 100 : overdriveCharge}%`;
+  if (odText) odText.textContent = overdriveActive ? "ACTIVE!" : `${Math.round(overdriveCharge)}%`;
 
 
   document.getElementById(
@@ -9330,6 +9572,16 @@ function updateLobby() {
     "profile-rebirths"
   ).textContent =
     rebirths;
+
+  const career = getCareerProgress();
+  const rankChip = document.getElementById("career-rank-chip");
+  const careerLevel = document.getElementById("career-level");
+  const careerXpText = document.getElementById("career-xp-text");
+  const careerXpFill = document.getElementById("career-xp-fill");
+  if (rankChip) rankChip.textContent = `${career.tag.icon} ${career.tag.name}`;
+  if (careerLevel) careerLevel.textContent = career.level;
+  if (careerXpText) careerXpText.textContent = `${career.current.toLocaleString()} / ${career.needed.toLocaleString()} XP`;
+  if (careerXpFill) careerXpFill.style.width = `${career.percent}%`;
 
 
   const equippedGunData =
@@ -9595,6 +9847,9 @@ function die() {
   clearTimeout(
     floatingCoinTimer
   );
+  clearTimeout(battleDropTimer);
+  clearTimeout(overdriveTimer);
+  document.body.classList.remove("overdrive-active");
 
 
   bestWave =
@@ -9602,6 +9857,8 @@ function die() {
       bestWave,
       wave
     );
+
+  checkCareerLevelUp();
 
 
   saveImportantChange();
@@ -9695,6 +9952,8 @@ document.getElementById(
 // ========================================================
 
 function clearArena() {
+
+  arena.querySelectorAll(".battle-drop").forEach(drop => drop.remove());
 
   enemyLayer.innerHTML =
     "";
