@@ -28,16 +28,7 @@ app.get("/", (req, res) => {
 
 // Serve CSS, JS, images, sounds, etc.
 // index:false prevents static middleware from deciding what "/" should be.
-app.use(express.static(path.join(__dirname, "public"), {
-  index: false,
-  etag: false,
-  lastModified: false,
-  setHeaders(res) {
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
-  }
-}));
+app.use(express.static(path.join(__dirname, "public"), { index: false }));
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -737,61 +728,6 @@ app.put(
 );
 
 // ======================================================
-// PROGRESS RESET
-// ======================================================
-
-async function resetPlayerProgressByKey(usernameKey) {
-  const result = await pool.query(
-    `
-    UPDATE players
-    SET
-      coins = 0,
-      rebirths = 0,
-      best_wave = 0,
-      total_kills = 0,
-      highest_wave = 0,
-      highest_money = 0,
-      highest_kills = 0,
-      upgrades = '{"damage":1,"bullets":1,"cooling":1,"health":1,"precision":1,"crit":1,"magnet":1,"bulletSpeed":0}'::jsonb,
-      owned = '{"guns":["pulse"],"drones":[],"keyboards":["standard"]}'::jsonb,
-      equipped = '{"gun":"pulse","drone":null,"keyboard":"standard","keycap":"standard","character":"astronaut"}'::jsonb,
-      keycaps = '["standard"]'::jsonb,
-      save_version = save_version + 1,
-      updated_at = NOW()
-    WHERE username_key = $1
-    RETURNING *
-    `,
-    [String(usernameKey || "").toLowerCase()]
-  );
-
-  return result.rows[0] || null;
-}
-
-app.post(
-  "/api/reset-progress",
-  requireLogin,
-  async (req, res) => {
-    try {
-      const player = await resetPlayerProgressByKey(req.user.usernameKey);
-      if (!player) return res.status(404).json({ error: "Account not found." });
-
-      await createGameEvent({
-        targetUsernameKey: String(req.user.usernameKey || "").toLowerCase(),
-        eventType: "reset",
-        title: "♻ PROGRESS RESET",
-        message: "Your game progress was reset.",
-        payload: { by: "self" }
-      });
-
-      res.json({ success: true, player: publicPlayer(player) });
-    } catch (error) {
-      console.error("SELF RESET ERROR:", error);
-      res.status(500).json({ error: "Could not reset progress." });
-    }
-  }
-);
-
-// ======================================================
 // ADMIN
 // ======================================================
 
@@ -838,34 +774,6 @@ app.get(
       res.status(500).json({
         error: "Could not load players."
       });
-    }
-  }
-);
-
-app.post(
-  "/api/admin/reset-progress",
-  requireLogin,
-  requireAdmin,
-  async (req, res) => {
-    try {
-      const target = String(req.body.target || "").trim().toLowerCase();
-      if (!target) return res.status(400).json({ error: "Enter a player username." });
-
-      const player = await resetPlayerProgressByKey(target);
-      if (!player) return res.status(404).json({ error: "Player not found." });
-
-      await createGameEvent({
-        targetUsernameKey: target,
-        eventType: "reset",
-        title: "♻ PROGRESS RESET",
-        message: "jasem reset your game progress.",
-        payload: { by: "jasem" }
-      });
-
-      res.json({ success: true, player: publicPlayer(player) });
-    } catch (error) {
-      console.error("ADMIN RESET ERROR:", error);
-      res.status(500).json({ error: "Could not reset player progress." });
     }
   }
 );
@@ -951,10 +859,10 @@ app.post(
         title: action === "add" ? "🪙 COINS RECEIVED" : "🛠 BALANCE UPDATED",
         message:
           action === "add"
-            ? `jasem sent you ${amount.toLocaleString()} coins.`
+            ? `Admin sent you ${amount.toLocaleString()} coins.`
             : action === "remove"
-              ? `jasem removed ${amount.toLocaleString()} coins from your balance.`
-              : `jasem set your balance to ${Number(updatedPlayer.coins || 0).toLocaleString()} coins.`,
+              ? `Admin removed ${amount.toLocaleString()} coins from your balance.`
+              : `Admin set your balance to ${Number(updatedPlayer.coins || 0).toLocaleString()} coins.`,
         payload: {
           action,
           amount,
@@ -1037,9 +945,9 @@ app.post(
       await createGameEvent({
         targetUsernameKey: null,
         eventType: "global",
-        title: "📡 JASEM",
+        title: "📡 GLOBAL MESSAGE",
         message,
-        payload: { from: "jasem" }
+        payload: { from: req.user.username || "Jasem" }
       });
 
       res.json({ success: true, message });
