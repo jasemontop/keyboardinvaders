@@ -6458,3 +6458,229 @@ body.boss-active #boss-bar {
 .keyboard-status-strip span:nth-child(3) {
   opacity: .25;
 }
+
+
+/* ===================================================== */
+/* SETTINGS + BOSS PHASES + RARE MOBS */
+/* ===================================================== */
+
+.settings-menu-button{
+  padding:10px 14px;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:8px;
+  cursor:pointer;
+  color:white;
+  background:rgba(8,14,34,.9);
+  font-size:11px;
+  font-weight:900;
+  transition:.2s
+}
+.settings-menu-button:hover{
+  color:#00171c;
+  background:var(--cyan);
+  transform:translateY(-2px);
+  box-shadow:0 0 25px rgba(71,239,255,.35)
+}
+.settings-overlay{
+  position:fixed;
+  inset:0;
+  z-index:9000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(1,3,10,.9);
+  backdrop-filter:blur(12px)
+}
+.settings-overlay.show{display:flex}
+.settings-panel{
+  width:min(620px,94vw);
+  max-height:88vh;
+  overflow:auto;
+  padding:22px;
+  border:1px solid rgba(71,239,255,.25);
+  border-radius:20px;
+  background:linear-gradient(145deg,#12234a,#060914);
+  box-shadow:0 25px 70px rgba(0,0,0,.55)
+}
+.settings-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px
+}
+.settings-header h2{margin:4px 0}
+.settings-header small{color:var(--cyan);font-weight:900;letter-spacing:2px}
+.settings-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:15px 4px;
+  border-top:1px solid rgba(255,255,255,.07)
+}
+.settings-row>div:first-child{display:grid;gap:4px}
+.settings-row small{opacity:.6}
+.setting-toggle{min-width:78px}
+.settings-slider-wrap{display:flex;align-items:center;gap:10px}
+.settings-slider-wrap input{width:160px}
+
+.no-screen-shake .shake,
+.no-screen-shake .enemy-hit{
+  animation:none!important
+}
+.soft-flash-effects .screen-flash,
+.soft-flash-effects .flashy-pulse{
+  opacity:.35!important
+}
+
+.enemy-tag.rare-golden{
+  color:#fff0a6!important;
+  background:#6b4d00!important;
+  border-color:#ffd84d!important
+}
+.enemy-tag.rare-glitched{
+  color:#f5b5ff!important;
+  background:#39104d!important;
+  border-color:#d663ff!important
+}
+.enemy-tag.rare-mythic{
+  color:white!important;
+  background:#5a0d50!important;
+  border-color:#ff6cf4!important;
+  animation:rareTagPulse .6s infinite alternate
+}
+.rare-enemy-golden .enemy-body{
+  filter:drop-shadow(0 0 14px #ffd84d)
+}
+.rare-enemy-glitched .enemy-body{
+  filter:drop-shadow(4px 0 0 #55efff) drop-shadow(-4px 0 0 #ff57ed);
+  animation:rareGlitch .28s infinite steps(2)
+}
+.rare-enemy-mythic .enemy-body{
+  filter:drop-shadow(0 0 22px #ff5df3) drop-shadow(0 0 42px #695eff);
+  animation:mythicPulse .48s infinite alternate
+}
+@keyframes rareTagPulse{to{transform:scale(1.08);box-shadow:0 0 16px currentColor}}
+@keyframes rareGlitch{50%{transform:translateX(3px) rotate(1deg)}}
+@keyframes mythicPulse{to{transform:scale(1.07)}}
+
+body.mythic-spawn-flash::after,
+body.glitched-spawn-flash::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:8500;
+  pointer-events:none
+}
+body.mythic-spawn-flash::after{
+  background:radial-gradient(circle,rgba(255,80,245,.26),rgba(50,0,90,.42));
+  animation:rareScreenPulse .3s 4 alternate
+}
+body.glitched-spawn-flash::after{
+  background:repeating-linear-gradient(90deg,rgba(80,235,255,.08) 0 6px,rgba(235,70,255,.12) 6px 12px);
+  animation:rareScreenPulse .2s 4 alternate
+}
+@keyframes rareScreenPulse{to{opacity:.18}}
+
+.boss-phase-three .enemy-body{
+  filter:drop-shadow(0 0 18px #ff9c52)
+}
+.boss-final-phase .enemy-body{
+  animation:bossFinalPulse .42s infinite alternate!important
+}
+@keyframes bossFinalPulse{
+  to{transform:scale(1.08);filter:drop-shadow(0 0 30px #ff4545)}
+}
+
+@media(max-width:700px){
+  .settings-row{align-items:flex-start;flex-direction:column}
+  .settings-slider-wrap{width:100%}
+  .settings-slider-wrap input{flex:1}
+}
+
+
+/* ===================================================== */
+/* KILL EFFECT CRATES */
+/* ===================================================== */
+
+.kill-crate-section{margin-top:22px}
+.kill-effect-crate{
+  max-width:330px;
+  border-color:rgba(255,94,247,.45)!important;
+  box-shadow:0 0 28px rgba(255,94,247,.12)
+}
+.kill-effect-collection{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:10px;
+  margin-top:14px
+}
+.kill-effect-chip{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:11px;
+  text-align:left;
+  border-radius:12px
+}
+.kill-effect-chip>span{font-size:24px}
+.kill-effect-chip>div{display:grid;gap:2px;flex:1}
+.kill-effect-chip small{opacity:.55;font-size:9px}
+.kill-effect-chip em{font-style:normal;font-size:9px;font-weight:900}
+.kill-effect-chip.locked{opacity:.42}
+.kill-effect-chip.equipped{
+  border-color:#ff66f5;
+  box-shadow:0 0 18px rgba(255,102,245,.22)
+}
+
+.kill-crate-info-overlay{
+  position:fixed;
+  inset:0;
+  z-index:9100;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(1,3,10,.9);
+  backdrop-filter:blur(12px)
+}
+.kill-crate-info-overlay.show{display:flex}
+.kill-crate-info-panel{
+  position:relative;
+  width:min(560px,94vw);
+  padding:24px;
+  border:1px solid rgba(255,94,247,.35);
+  border-radius:20px;
+  background:linear-gradient(145deg,#261239,#090712);
+  box-shadow:0 25px 70px rgba(0,0,0,.6)
+}
+.kill-crate-info-panel>button{position:absolute;right:14px;top:14px}
+.kill-crate-info-panel small{color:#ff72f6;font-weight:900;letter-spacing:2px}
+.kill-odds-list{display:grid;gap:8px;margin:16px 0}
+.kill-odds-list>div{
+  display:flex;
+  justify-content:space-between;
+  gap:15px;
+  padding:10px 12px;
+  border-radius:9px;
+  background:rgba(255,255,255,.055)
+}
+
+.custom-kill-effect{
+  position:absolute;
+  z-index:85;
+  pointer-events:none;
+  font-size:40px;
+  transform:translate(-50%,-50%);
+  animation:customKillFx .8s ease-out forwards
+}
+@keyframes customKillFx{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.15) rotate(-18deg)}
+  35%{opacity:1;transform:translate(-50%,-50%) scale(1.35) rotate(8deg)}
+  100%{opacity:0;transform:translate(-50%,-78%) scale(2.15) rotate(22deg)}
+}
+.killfx-pixel{filter:drop-shadow(0 0 12px #b85cff)}
+.killfx-frost{filter:drop-shadow(0 0 14px #68ecff)}
+.killfx-inferno{filter:drop-shadow(0 0 16px #ff6a35)}
+.killfx-mythic{filter:drop-shadow(0 0 20px #ff58f5) drop-shadow(0 0 34px #705fff)}
