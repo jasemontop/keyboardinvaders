@@ -566,89 +566,141 @@ app.put(
           Math.floor(Number(req.body.totalKills) || 0)
         );
 
-      const upgrades =
-        req.body.upgrades && typeof req.body.upgrades === "object"
+      const incomingUpgrades =
+        req.body.upgrades && typeof req.body.upgrades === "object" && !Array.isArray(req.body.upgrades)
           ? req.body.upgrades
-          : current.upgrades;
+          : {};
 
-      const owned =
-        req.body.owned && typeof req.body.owned === "object"
+      const incomingOwned =
+        req.body.owned && typeof req.body.owned === "object" && !Array.isArray(req.body.owned)
           ? req.body.owned
-          : current.owned;
+          : {};
 
-      const equipped =
-        req.body.equipped && typeof req.body.equipped === "object"
+      const incomingEquipped =
+        req.body.equipped && typeof req.body.equipped === "object" && !Array.isArray(req.body.equipped)
           ? req.body.equipped
           : current.equipped;
 
-      const keycaps =
+      const incomingKeycaps =
         Array.isArray(req.body.keycaps)
           ? req.body.keycaps
-          : current.keycaps;
+          : [];
 
-      let result;
+      const currentUpgrades =
+        current.upgrades && typeof current.upgrades === "object" && !Array.isArray(current.upgrades)
+          ? current.upgrades
+          : {};
 
-      if (stateIsCurrent) {
-        // Only a browser holding the newest revision may replace
-        // upgrades / owned items / equipped items.
-        result = await client.query(
-          `
-          UPDATE players
-          SET
-            coins = GREATEST(0, coins + $2),
+      const currentOwned =
+        current.owned && typeof current.owned === "object" && !Array.isArray(current.owned)
+          ? current.owned
+          : {};
 
-            rebirths = GREATEST(rebirths, $3),
-            best_wave = GREATEST(best_wave, $4),
-            total_kills = GREATEST(total_kills, $5),
+      const currentKeycaps =
+        Array.isArray(current.keycaps)
+          ? current.keycaps
+          : ["standard"];
 
-            highest_wave = GREATEST(highest_wave, $4),
-            highest_money = GREATEST(highest_money, GREATEST(0, coins + $2)),
-            highest_kills = GREATEST(highest_kills, $5),
+      const isRebirth =
+        rebirths > Math.max(0, Number(current.rebirths || 0));
 
-            upgrades = $6,
-            owned = $7,
-            equipped = $8,
-            keycaps = $9,
+      let mergedUpgrades;
+      let mergedOwned;
+      let mergedEquipped;
 
-            save_version = save_version + 1,
-            updated_at = NOW()
-
-          WHERE id = $1
-          RETURNING *
-          `,
-          [
-            req.user.id,
-            coinDelta,
-            rebirths,
-            bestWave,
-            totalKills,
-            upgrades,
-            owned,
-            equipped,
-            JSON.stringify(keycaps)
-          ]
-        );
+      if (isRebirth) {
+        // Rebirth is an intentional reset, so accept the client's reset state.
+        mergedUpgrades = incomingUpgrades;
+        mergedOwned = incomingOwned;
+        mergedEquipped = incomingEquipped;
       }
       else {
-        // This tab is stale. Preserve the newest server inventory/upgrades,
-        // but still merge real coin earnings/spending from this tab.
-        result = await client.query(
-          `
-          UPDATE players
-          SET
-            coins = GREATEST(0, coins + $2),
-            highest_money = GREATEST(highest_money, GREATEST(0, coins + $2)),
-            updated_at = NOW()
+        // Normal saves are monotonic:
+        // an old tab can NEVER erase an upgrade or owned item.
+        mergedUpgrades = { ...currentUpgrades };
 
-          WHERE id = $1
-          RETURNING *
-          `,
-          [
-            req.user.id,
-            coinDelta
-          ]
-        );
+        for (const [key, value] of Object.entries(incomingUpgrades)) {
+          const incomingLevel = Number(value);
+          const currentLevel = Number(mergedUpgrades[key]);
+
+          if (Number.isFinite(incomingLevel)) {
+            mergedUpgrades[key] = Number.isFinite(currentLevel)
+              ? Math.max(currentLevel, incomingLevel)
+              : incomingLevel;
+          }
+        }
+
+        const mergeOwnedList = (currentList, incomingList, starter = []) => {
+          const combined = [
+            ...starter,
+            ...(Array.isArray(currentList) ? currentList : []),
+            ...(Array.isArray(incomingList) ? incomingList : [])
+          ];
+
+          return [...new Set(combined.filter(value => typeof value === "string" && value))];
+        };
+
+        mergedOwned = {
+          guns: mergeOwnedList(currentOwned.guns, incomingOwned.guns, ["pulse"]),
+          drones: mergeOwnedList(currentOwned.drones, incomingOwned.drones),
+          keyboards: mergeOwnedList(currentOwned.keyboards, incomingOwned.keyboards, ["standard"])
+        };
+
+        // Equip changes are allowed, but ownership itself is never lost.
+        mergedEquipped = incomingEquipped;
       }
+
+      const mergedKeycaps = [
+        ...new Set([
+          "standard",
+          ...currentKeycaps,
+          ...incomingKeycaps
+        ].filter(value => typeof value === "string" && value))
+      ];
+
+      const result = await client.query(
+        `
+        UPDATE players
+        SET
+          coins = GREATEST(0, coins + $2),
+
+          rebirths = GREATEST(rebirths, $3),
+
+          best_wave = CASE
+            WHEN $10 THEN $4
+            ELSE GREATEST(best_wave, $4)
+          END,
+
+          total_kills = GREATEST(total_kills, $5),
+
+          highest_wave = GREATEST(highest_wave, $4),
+          highest_money = GREATEST(highest_money, GREATEST(0, coins + $2)),
+          highest_kills = GREATEST(highest_kills, $5),
+
+          upgrades = $6::jsonb,
+          owned = $7::jsonb,
+          equipped = $8::jsonb,
+          keycaps = $9::jsonb,
+
+          save_version = save_version + 1,
+          updated_at = NOW()
+
+        WHERE id = $1
+        RETURNING *
+        `,
+        [
+          req.user.id,
+          coinDelta,
+          rebirths,
+          bestWave,
+          totalKills,
+          JSON.stringify(mergedUpgrades),
+          JSON.stringify(mergedOwned),
+          JSON.stringify(mergedEquipped),
+          JSON.stringify(mergedKeycaps),
+          isRebirth
+        ]
+      );
 
       await client.query("COMMIT");
 
