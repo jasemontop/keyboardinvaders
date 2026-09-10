@@ -6,7 +6,7 @@
 
   <title>Keyboard Invaders</title>
 
-  <link rel="stylesheet" href="style.css?v=20260909-sessionfix2">
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
@@ -252,9 +252,7 @@
 
   </nav>
 
-  <button id="open-settings" class="settings-corner-button" type="button" aria-label="Open settings">
-    ⚙ SETTINGS
-  </button>
+
 
   <main class="lobby-main">
 
@@ -1740,32 +1738,6 @@
 <!-- ===================================================== -->
 
 
-<!-- SETTINGS -->
-<div id="settings-overlay" class="settings-overlay" aria-hidden="true">
-  <div class="settings-panel">
-    <div class="settings-header">
-      <div><small>GAME OPTIONS</small><h2>⚙ SETTINGS</h2></div>
-      <button id="close-settings" type="button">✕</button>
-    </div>
-    <div class="settings-section">
-      <div class="settings-row"><div><b>🔊 SOUND</b><small>Turn all game sounds on or off.</small></div><button id="setting-sound" class="setting-toggle" type="button">ON</button></div>
-      <div class="settings-row settings-slider-row"><div><b>🎚 VOLUME</b><small>Change how loud the game sounds are.</small></div><div class="settings-slider-wrap"><input id="setting-volume" type="range" min="0" max="100" step="5" value="100"><strong id="setting-volume-value">100%</strong></div></div>
-      <div class="settings-row"><div><b>📳 SCREEN SHAKE</b><small>Turn impact movement on or off.</small></div><button id="setting-shake" class="setting-toggle" type="button">ON</button></div>
-      <div class="settings-row"><div><b>✨ FLASH EFFECTS</b><small>Use full or softer flashes.</small></div><button id="setting-flashes" class="setting-toggle" type="button">FULL</button></div>
-    </div>
-    <div class="settings-section">
-      <button id="settings-replay-tutorial" class="settings-wide-button" type="button">🎓 REPLAY TUTORIAL</button>
-      <button id="settings-close-panels" class="settings-wide-button" type="button">🧹 CLOSE OPEN MENUS</button>
-    </div>
-    <div class="settings-section settings-danger-zone">
-      <small>DANGER ZONE</small><h3>RESET PROGRESS</h3>
-      <p>This keeps your username, but resets coins, upgrades, items, waves, kills and rebirths.</p>
-      <button id="settings-reset-progress" type="button">♻ RESET MY PROGRESS</button>
-      <div id="settings-status" class="settings-status"></div>
-    </div>
-  </div>
-</div>
-
 <!-- ADMIN PANEL -->
 <div id="admin-overlay" class="admin-overlay">
   <div class="admin-panel">
@@ -1792,7 +1764,6 @@
         <button id="admin-give-coins" type="button">🪙 GIVE COINS</button>
         <button id="admin-remove-coins" type="button">➖ REMOVE COINS</button>
         <button id="admin-set-coins" type="button">🎯 SET COINS</button>
-        <button id="admin-reset-progress" class="admin-danger-button" type="button">♻ RESET PROGRESS</button>
       </div>
       <div id="admin-message" class="admin-message"></div>
     </div>
@@ -1865,9 +1836,9 @@
 <div id="tutorial-overlay" class="tutorial-overlay" aria-hidden="true">
   <div id="tutorial-focus" class="tutorial-focus"></div>
   <div id="tutorial-tip" class="tutorial-tip">
-    <div class="tutorial-topline"><small id="tutorial-step-count">TUTORIAL</small><span id="tutorial-progress-text">NEW PLAYER GUIDE</span></div>
+    <small id="tutorial-step-count">TUTORIAL</small>
     <h2 id="tutorial-title">WELCOME!</h2>
-    <p id="tutorial-text">I will quickly show you how the game works.</p><div id="tutorial-dots" class="tutorial-dots"></div>
+    <p id="tutorial-text">I will quickly show you how the game works.</p>
     <div class="tutorial-actions">
       <button id="tutorial-skip" type="button">SKIP</button>
       <button id="tutorial-next" type="button">NEXT →</button>
@@ -1875,7 +1846,7 @@
   </div>
 </div>
 
-<script src="script.js?v=20260909-sessionfix2"></script>
+<script src="script.js"></script>
 
 <div id="game-notifications" class="game-notifications" aria-live="polite"></div>
 
