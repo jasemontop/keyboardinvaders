@@ -9250,6 +9250,12 @@ function die() {
 
   save();
 
+  // Push final run stats to Postgres immediately so the leaderboard
+  // updates even if the player closes/leaves right after the run.
+  if (accountToken) {
+    syncOnlineSave(true);
+  }
+
 
   document.getElementById(
     "death-wave"
