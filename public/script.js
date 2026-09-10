@@ -62,6 +62,36 @@ const defaultUpgrades = {
   bulletSpeed: 0
 };
 
+// Upgrade prices must exist before login/account loading can call renderShops().
+const upgradeCosts = {
+
+  damage:
+    8,
+
+  bullets:
+    25,
+
+  cooling:
+    12,
+
+  health:
+    10,
+
+  precision:
+    18,
+
+  crit:
+    26,
+
+  magnet:
+    30,
+
+  bulletSpeed:
+    35
+
+};
+
+
 let upgrades = {
   ...defaultUpgrades,
   ...(JSON.parse(
@@ -3832,33 +3862,6 @@ function closeStatsPanel() {
 // UPGRADES
 // ========================================================
 
-const upgradeCosts = {
-
-  damage:
-    8,
-
-  bullets:
-    25,
-
-  cooling:
-    12,
-
-  health:
-    10,
-
-  precision:
-    18,
-
-  crit:
-    26,
-
-  magnet:
-    30,
-
-  bulletSpeed:
-    35
-
-};
 
 
 function getUpgradeCost(
