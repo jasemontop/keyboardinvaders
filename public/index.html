@@ -250,6 +250,14 @@
       ⚡ ADMIN
     </button>
 
+    <button
+      id="open-settings"
+      class="settings-menu-button"
+      type="button"
+    >
+      ⚙ SETTINGS
+    </button>
+
   </nav>
 
 
@@ -962,6 +970,28 @@
 
         </div>
 
+
+
+        <div class="kill-crate-section">
+          <div class="shop-heading">
+            <div>
+              <div class="tiny-label">COMBAT COSMETICS</div>
+              <h2>KILL EFFECT CRATE</h2>
+            </div>
+            <p>Unlock permanent kill animations. Your odds are shown before opening.</p>
+          </div>
+
+          <article class="crate-card kill-effect-crate">
+            <div class="crate-name">KILL FX</div>
+            <div class="crate-icon">💥</div>
+            <h3>EFFECT CRATE</h3>
+            <p>Common 55% • Rare 27% • Epic 12% • Legendary 5% • Mythic 1%</p>
+            <button id="kill-crate-info" type="button">👁 VIEW EFFECTS + ODDS</button>
+            <button id="open-kill-crate" type="button">OPEN 🪙2,500</button>
+          </article>
+
+          <div id="kill-effect-collection" class="kill-effect-collection"></div>
+        </div>
 
         <div class="keycap-collection">
 
@@ -1732,6 +1762,67 @@
 
 </div>
 
+
+
+
+<div id="kill-crate-info-overlay" class="kill-crate-info-overlay">
+  <div class="kill-crate-info-panel">
+    <button id="close-kill-crate-info" type="button">✕</button>
+    <small>KILL EFFECT CRATE</small>
+    <h2>💥 POSSIBLE EFFECTS</h2>
+    <div class="kill-odds-list">
+      <div><span>COMMON • ENERGY BURST</span><strong>55%</strong></div>
+      <div><span>RARE • PIXEL POP</span><strong>27%</strong></div>
+      <div><span>EPIC • FROST SHATTER</span><strong>12%</strong></div>
+      <div><span>LEGENDARY • INFERNO</span><strong>5%</strong></div>
+      <div><span>MYTHIC • VOID RIFT</span><strong>1%</strong></div>
+    </div>
+    <p>Duplicates convert into credits. New effects unlock permanently on this browser.</p>
+  </div>
+</div>
+
+<!-- ===================================================== -->
+<!-- SETTINGS -->
+<!-- ===================================================== -->
+<div id="settings-overlay" class="settings-overlay">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <div>
+        <small>GAME OPTIONS</small>
+        <h2>⚙ SETTINGS</h2>
+      </div>
+      <button id="close-settings" type="button">✕</button>
+    </div>
+
+    <div class="settings-row">
+      <div><b>🔊 SOUND</b><small>Turn all game sounds on or off.</small></div>
+      <button id="setting-sound" class="setting-toggle" type="button">ON</button>
+    </div>
+
+    <div class="settings-row">
+      <div><b>🎚 VOLUME</b><small>Change overall game volume.</small></div>
+      <div class="settings-slider-wrap">
+        <input id="setting-volume" type="range" min="0" max="100" step="5">
+        <strong id="setting-volume-value">100%</strong>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div><b>📳 SCREEN SHAKE</b><small>Turn impact shake effects on or off.</small></div>
+      <button id="setting-shake" class="setting-toggle" type="button">ON</button>
+    </div>
+
+    <div class="settings-row">
+      <div><b>✨ FLASH EFFECTS</b><small>Use full or softer screen flashes.</small></div>
+      <button id="setting-flashes" class="setting-toggle" type="button">FULL</button>
+    </div>
+
+    <div class="settings-row">
+      <div><b>⚠ RARE MOB ALERTS</b><small>Turn special rare-enemy screen reactions on or off.</small></div>
+      <button id="setting-rare-fx" class="setting-toggle" type="button">ON</button>
+    </div>
+  </div>
+</div>
 
 <!-- ===================================================== -->
 <!-- GLOBAL LEADERBOARD -->
