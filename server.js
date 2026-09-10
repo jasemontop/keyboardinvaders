@@ -28,7 +28,16 @@ app.get("/", (req, res) => {
 
 // Serve CSS, JS, images, sounds, etc.
 // index:false prevents static middleware from deciding what "/" should be.
-app.use(express.static(path.join(__dirname, "public"), { index: false }));
+app.use(express.static(path.join(__dirname, "public"), {
+  index: false,
+  etag: false,
+  lastModified: false,
+  setHeaders(res) {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+  }
+}));
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
