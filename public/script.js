@@ -6929,41 +6929,62 @@ function moveBullets() {
 // ========================================================
 
 function bossJamKeys(count = 2, duration = 4200) {
+  if (!running) return;
+
   const available = Array.from(document.querySelectorAll(".key:not(.jammed)"));
+  const limit = Math.min(Math.max(0, count), available.length);
 
-  for (let i = 0; i < Math.min(count, available.length); i++) {
-    const key = randomItem(available);
-    const index = available.indexOf(key);
-
-    if (index >= 0) available.splice(index, 1);
+  for (let i = 0; i < limit; i++) {
+    const index = Math.floor(Math.random() * available.length);
+    const key = available.splice(index, 1)[0];
+    if (!key) continue;
 
     const letter = key.dataset.key || key.textContent.trim().charAt(0);
-    jamKey(letter, duration);
+    if (letter) jamKey(letter, duration);
   }
 }
 
 function bossSummonMinions(amount = 2) {
-  enemiesRemaining += amount;
+  if (!running) return;
 
-  for (let i = 0; i < amount; i++) {
+  // Never allow boss abilities to create an uncontrolled enemy/timer pile.
+  const safeAmount = Math.min(3, Math.max(0, Math.floor(amount)));
+  if (!safeAmount) return;
+
+  enemiesRemaining += safeAmount;
+
+  for (let i = 0; i < safeAmount; i++) {
     setTimeout(() => {
-      if (running) spawnEnemy();
+      if (!running) return;
+      spawnEnemy();
     }, i * 220);
   }
 }
 
 function bossProjectileStorm(enemy, amount = 3) {
-  for (let i = 0; i < amount; i++) {
+  if (!running || !enemy || !enemies.includes(enemy)) return;
+
+  const safeAmount = Math.min(4, Math.max(0, Math.floor(amount)));
+
+  for (let i = 0; i < safeAmount; i++) {
     setTimeout(() => {
-      if (running && enemies.includes(enemy)) {
-        enemyShoot(enemy);
-      }
+      if (!running || !enemies.includes(enemy)) return;
+      enemyShoot(enemy);
     }, i * 240);
   }
 }
 
 function enterBossPhase(enemy, threshold) {
-  if (!enemy.boss || enemy.triggeredBossPhases.includes(threshold)) return;
+  if (
+    !running ||
+    !enemy ||
+    !enemy.boss ||
+    !enemies.includes(enemy) ||
+    enemy.hp <= 0 ||
+    enemy.triggeredBossPhases.includes(threshold)
+  ) {
+    return;
+  }
 
   enemy.triggeredBossPhases.push(threshold);
 
@@ -6982,9 +7003,7 @@ function enterBossPhase(enemy, threshold) {
 
     bossJamKeys(2, 4000);
     bossSummonMinions(2);
-  }
-
-  if (threshold === 50) {
+  } else if (threshold === 50) {
     enemy.bossPhase = 3;
     enemy.baseSpeed *= 1.16;
     enemy.speed = enemy.baseSpeed;
@@ -6997,10 +7016,8 @@ function enterBossPhase(enemy, threshold) {
       3500
     );
 
-    bossProjectileStorm(enemy, 4);
-  }
-
-  if (threshold === 25) {
+    bossProjectileStorm(enemy, 3);
+  } else if (threshold === 25) {
     enemy.bossPhase = 4;
     enemy.baseSpeed *= 1.2;
     enemy.speed = enemy.baseSpeed;
@@ -7013,9 +7030,9 @@ function enterBossPhase(enemy, threshold) {
       4000
     );
 
-    bossJamKeys(4, 5200);
+    bossJamKeys(3, 5200);
     bossSummonMinions(3);
-    bossProjectileStorm(enemy, 5);
+    bossProjectileStorm(enemy, 4);
   }
 
   combatText(
@@ -7029,80 +7046,87 @@ function enterBossPhase(enemy, threshold) {
 }
 
 function checkBossPhase(enemy) {
-  if (!enemy.boss) return;
+  if (!running || !enemy || !enemy.boss || !enemies.includes(enemy)) return;
 
-  const hpPercent = enemy.hp / enemy.maxHp;
+  const hpPercent = enemy.maxHp > 0 ? enemy.hp / enemy.maxHp : 1;
 
-  if (hpPercent <= 0.75) enterBossPhase(enemy, 75);
-  if (hpPercent <= 0.50) enterBossPhase(enemy, 50);
-  if (hpPercent <= 0.25) enterBossPhase(enemy, 25);
+  // Only enter the first newly reached phase. This prevents a large hit from
+  // firing several boss transitions in the same collision/update.
+  if (hpPercent <= 0.25 && !enemy.triggeredBossPhases.includes(25)) {
+    enterBossPhase(enemy, 25);
+  } else if (hpPercent <= 0.50 && !enemy.triggeredBossPhases.includes(50)) {
+    enterBossPhase(enemy, 50);
+  } else if (hpPercent <= 0.75 && !enemy.triggeredBossPhases.includes(75)) {
+    enterBossPhase(enemy, 75);
+  }
 }
 
 function bossAbility(enemy, left, right) {
-  if (!enemy.boss || enemy.abilityBusy || performance.now() < enemy.nextAbility) return;
+  if (
+    !running ||
+    !enemy ||
+    !enemy.boss ||
+    !enemies.includes(enemy) ||
+    enemy.abilityBusy ||
+    performance.now() < enemy.nextAbility
+  ) {
+    return;
+  }
 
   enemy.abilityBusy = true;
 
   const phase = enemy.bossPhase || 1;
-  const delay = Math.max(1300, 4300 - enemy.bossNumber * 180 - phase * 300);
-
+  const delay = Math.max(1500, 4300 - enemy.bossNumber * 180 - phase * 300);
   enemy.nextAbility = performance.now() + delay;
 
   let moves = ["charge", "shot", "teleport"];
-
   if (phase >= 2) moves.push("jam", "minions");
   if (phase >= 3) moves.push("storm", "heal");
-  if (phase >= 4) moves.push("storm", "jam", "minions");
+  if (phase >= 4) moves.push("storm", "jam");
 
   const move = randomItem(moves);
 
-  if (move === "charge") {
-    showAnnouncement("⚠ BOSS MOVE: CHARGE ⚠", "THE BOSS IS RUSHING!", 2200);
-    enemy.speed = enemy.baseSpeed * (2 + phase * 0.18);
+  try {
+    if (move === "charge") {
+      showAnnouncement("⚠ BOSS MOVE: CHARGE ⚠", "THE BOSS IS RUSHING!", 2200);
+      enemy.speed = enemy.baseSpeed * (2 + phase * 0.18);
 
-    setTimeout(() => {
-      if (enemies.includes(enemy)) enemy.speed = enemy.baseSpeed;
-      enemy.abilityBusy = false;
-    }, 1050);
+      setTimeout(() => {
+        if (enemies.includes(enemy)) enemy.speed = enemy.baseSpeed;
+        if (enemy) enemy.abilityBusy = false;
+      }, 1050);
+      return;
+    }
 
-    return;
-  }
-
-  if (move === "shot") {
-    showAnnouncement("⚠ BOSS PROJECTILE ⚠", "WATCH YOUR KEYS!", 2000);
-    enemyShoot(enemy);
-  }
-
-  if (move === "storm") {
-    showAnnouncement("⚠ PROJECTILE STORM ⚠", "MULTIPLE KEYS TARGETED!", 2200);
-    bossProjectileStorm(enemy, 3 + Math.min(3, phase));
-  }
-
-  if (move === "jam") {
-    showAnnouncement("⚠ KEY JAM ATTACK ⚠", "MULTIPLE KEYS DISABLED!", 2200);
-    bossJamKeys(Math.min(5, phase), 4200 + phase * 350);
-  }
-
-  if (move === "minions") {
-    showAnnouncement("⚠ BOSS SUMMON ⚠", "MINIONS INCOMING!", 2200);
-    bossSummonMinions(Math.min(4, phase));
-  }
-
-  if (move === "heal") {
-    showAnnouncement("⚠ BOSS REPAIR ⚠", "THE BOSS RESTORED HEALTH!", 2200);
-    enemy.hp = Math.min(enemy.maxHp, enemy.hp + enemy.maxHp * 0.045);
-    updateEnemyUI(enemy);
-    updateBossBar(enemy);
-  }
-
-  if (move === "teleport") {
-    showAnnouncement("⚠ BOSS TELEPORT ⚠", "TARGET RELOCATED!", 2000);
-    enemy.x = randomNumber(left, Math.max(left, right));
-    combatText(enemy.x, enemy.y, "TELEPORT!", "special-text");
+    if (move === "shot") {
+      showAnnouncement("⚠ BOSS PROJECTILE ⚠", "WATCH YOUR KEYS!", 2000);
+      enemyShoot(enemy);
+    } else if (move === "storm") {
+      showAnnouncement("⚠ PROJECTILE STORM ⚠", "MULTIPLE KEYS TARGETED!", 2200);
+      bossProjectileStorm(enemy, 3);
+    } else if (move === "jam") {
+      showAnnouncement("⚠ KEY JAM ATTACK ⚠", "MULTIPLE KEYS DISABLED!", 2200);
+      bossJamKeys(Math.min(4, phase), 4200 + phase * 350);
+    } else if (move === "minions") {
+      showAnnouncement("⚠ BOSS SUMMON ⚠", "MINIONS INCOMING!", 2200);
+      bossSummonMinions(Math.min(3, phase));
+    } else if (move === "heal") {
+      showAnnouncement("⚠ BOSS REPAIR ⚠", "THE BOSS RESTORED HEALTH!", 2200);
+      enemy.hp = Math.min(enemy.maxHp, enemy.hp + enemy.maxHp * 0.045);
+      updateEnemyUI(enemy);
+      updateBossBar(enemy);
+    } else if (move === "teleport") {
+      showAnnouncement("⚠ BOSS TELEPORT ⚠", "TARGET RELOCATED!", 2000);
+      enemy.x = randomNumber(left, Math.max(left, right));
+      combatText(enemy.x, enemy.y, "TELEPORT!", "special-text");
+    }
+  } catch (error) {
+    // A boss ability should never be able to kill the main game loop.
+    console.error("Boss ability error:", error);
   }
 
   setTimeout(() => {
-    enemy.abilityBusy = false;
+    if (enemy) enemy.abilityBusy = false;
   }, 650);
 }
 
@@ -7255,9 +7279,9 @@ function moveEnemies() {
     }
 
 
-    if (enemy.boss) {
-      bossAbility(enemy, left, right);
+    if (enemy.boss && enemies.includes(enemy)) {
       checkBossPhase(enemy);
+      bossAbility(enemy, left, right);
     }
 
 
@@ -7981,6 +8005,7 @@ function hitEnemy(
   enemy,
   damage
 ) {
+  if (!running || !enemy || !enemies.includes(enemy) || enemy.hp <= 0) return;
 
   const critical =
     Math.random() <
@@ -8091,16 +8116,8 @@ function hitEnemy(
   );
 
 
-  if (
-    enemy.boss
-  ) {
-
-    updateBossBar(
-      enemy
-    );
-
-    checkBossPhase(enemy);
-
+  if (enemy.boss) {
+    updateBossBar(enemy);
   }
 
 
@@ -9934,11 +9951,13 @@ function showBossBar(
 function updateBossBar(
   enemy
 ) {
+  if (!enemy) return;
 
-  document.getElementById(
-    "boss-fill"
-  )
-  .style.width =
+  const fill = document.getElementById("boss-fill");
+  const hpLabel = document.getElementById("boss-hp");
+  if (!fill || !hpLabel || enemy.maxHp <= 0) return;
+
+  fill.style.width =
     clamp(
       enemy.hp /
       enemy.maxHp *
@@ -9950,10 +9969,7 @@ function updateBossBar(
     "%";
 
 
-  document.getElementById(
-    "boss-hp"
-  ).textContent =
-    `${Math.ceil(enemy.hp)} / ${enemy.maxHp}`;
+  hpLabel.textContent = `${Math.ceil(Math.max(0, enemy.hp))} / ${enemy.maxHp}`;
 
 }
 
