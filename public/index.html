@@ -477,6 +477,7 @@
             🚀 START RUN
 
           </button>
+<button type="button" class="lobby-stats-button" data-open-stats>📊 STATS / BUFFS</button>
 
         </div>
 
@@ -1269,6 +1270,12 @@
       <div class="mini-xp-track"><div id="game-xp-fill"></div></div>
     </div>
 
+    <div class="run-controls">
+      <button type="button" data-open-stats>📊 STATS</button>
+      <button type="button" id="run-die">💀 DIE</button>
+      <button type="button" id="run-leave">🚪 LEAVE</button>
+    </div>
+
   </header>
 
 
@@ -1372,7 +1379,7 @@
     </div>
 
     <div class="hud-card overdrive-card">
-      <small>OVERDRIVE</small>
+      <small>POWER MODE</small>
       <b id="overdrive-text">0%</b>
       <div class="overdrive-track"><div id="overdrive-fill"></div></div>
     </div>
@@ -1807,6 +1814,21 @@
   </div>
 </div>
 
+
+
+<div id="stats-panel" class="stats-panel" aria-hidden="true">
+  <div class="stats-window">
+    <div class="stats-window-head">
+      <div>
+        <small>YOUR CURRENT POWER</small>
+        <h2>📊 STATS & BUFFS</h2>
+      </div>
+      <button id="close-stats" type="button">✕</button>
+    </div>
+    <p class="stats-help">These numbers show what your upgrades and equipped items are actually doing.</p>
+    <div id="stats-list" class="stats-list"></div>
+  </div>
+</div>
 
 <div id="tutorial-overlay" class="tutorial-overlay" aria-hidden="true">
   <div id="tutorial-focus" class="tutorial-focus"></div>
