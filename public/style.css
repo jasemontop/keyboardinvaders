@@ -5826,3 +5826,205 @@ body.fx-kill #arena {
 .keycap-ember { background: linear-gradient(135deg,#6b160e,#ff7a21) !important; box-shadow: 0 0 16px rgba(255,96,32,.42) !important; }
 .keycap-ice { background: linear-gradient(135deg,#d8fbff,#46cfff) !important; color:#06202a !important; box-shadow: 0 0 16px rgba(70,207,255,.42) !important; }
 .keycap-royal { background: linear-gradient(135deg,#5b3500,#ffd84d,#fff1a3) !important; color:#291800 !important; box-shadow: 0 0 18px rgba(255,216,77,.5) !important; }
+
+
+/* ========================================================
+   CAREER / OVERDRIVE / BATTLE-DROP UPDATE
+   ======================================================== */
+
+.career-progress-card {
+  width: min(240px, 92%);
+  margin: 10px auto 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(71,239,255,.22);
+  background: rgba(7,16,31,.55);
+  border-radius: 12px;
+  box-shadow: inset 0 0 18px rgba(71,239,255,.04);
+}
+
+.career-progress-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: .08em;
+  margin-bottom: 7px;
+}
+
+.career-xp-track,
+.mini-xp-track,
+.overdrive-track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+#career-xp-fill,
+#game-xp-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg,#47efff,#8b7cff,#ff55c8);
+  box-shadow: 0 0 12px rgba(71,239,255,.5);
+  transition: width .3s ease;
+}
+
+.hud-username {
+  min-width: 132px;
+}
+
+#game-nametag {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  letter-spacing: .08em;
+  opacity: .76;
+  white-space: nowrap;
+}
+
+.hud-career {
+  min-width: 86px;
+  display: grid;
+  gap: 5px;
+  align-content: center;
+}
+
+.hud-career small { font-weight: 900; }
+.mini-xp-track { width: 82px; height: 5px; }
+
+.overdrive-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.overdrive-card b {
+  display: block;
+  margin: 4px 0 7px;
+  color: #ffe95a;
+  text-shadow: 0 0 10px rgba(255,233,90,.5);
+}
+
+#overdrive-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg,#ffe95a,#ff8b42,#ff3d9e);
+  box-shadow: 0 0 16px rgba(255,150,60,.75);
+  transition: width .18s ease;
+}
+
+body.overdrive-active #arena {
+  box-shadow: inset 0 0 60px rgba(255,220,70,.10), 0 0 28px rgba(255,130,50,.12);
+  animation: overdrive-arena-pulse 1.15s ease-in-out infinite;
+}
+
+body.overdrive-active .game-hud {
+  box-shadow: 0 5px 30px rgba(255,177,57,.16);
+}
+
+body.overdrive-active #overdrive-fill {
+  animation: overdrive-bar .45s linear infinite;
+}
+
+body.overdrive-active::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  pointer-events: none;
+  background: repeating-linear-gradient(115deg,transparent 0 90px,rgba(255,223,92,.025) 92px 94px);
+  animation: overdrive-scan 1.8s linear infinite;
+}
+
+@keyframes overdrive-arena-pulse {
+  0%,100% { filter: saturate(1.05) brightness(1); }
+  50% { filter: saturate(1.35) brightness(1.05); }
+}
+@keyframes overdrive-bar {
+  0%,100% { filter: brightness(1); }
+  50% { filter: brightness(1.55); }
+}
+@keyframes overdrive-scan {
+  from { transform: translateX(-70px); }
+  to { transform: translateX(70px); }
+}
+
+.battle-drop {
+  position: absolute;
+  z-index: 46;
+  width: 116px;
+  min-height: 82px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.28);
+  background: rgba(8,15,30,.88);
+  color: white;
+  cursor: pointer;
+  transform: translate(-50%,-50%);
+  box-shadow: 0 0 22px rgba(71,239,255,.24), inset 0 0 20px rgba(255,255,255,.035);
+  animation: battle-drop-enter .38s cubic-bezier(.2,1.35,.4,1), battle-drop-float 1.35s ease-in-out .38s infinite;
+}
+
+.battle-drop::before {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 20px;
+  border: 1px dashed rgba(255,255,255,.26);
+  animation: drop-ring 5s linear infinite;
+}
+
+.battle-drop span { font-size: 25px; filter: drop-shadow(0 0 8px currentColor); }
+.battle-drop b { font-size: 10px; letter-spacing: .08em; }
+.battle-drop small { font-size: 8px; opacity: .72; }
+.battle-drop:hover { filter: brightness(1.28); }
+.battle-drop.claimed { animation: battle-drop-claim .26s ease forwards; }
+
+.drop-coolant { box-shadow: 0 0 28px rgba(71,239,255,.42); }
+.drop-shield { box-shadow: 0 0 28px rgba(84,255,161,.38); }
+.drop-emp { box-shadow: 0 0 28px rgba(190,100,255,.42); }
+.drop-bounty { box-shadow: 0 0 28px rgba(255,218,77,.42); }
+.drop-rapid { box-shadow: 0 0 28px rgba(255,95,95,.42); }
+
+@keyframes battle-drop-enter {
+  from { opacity: 0; transform: translate(-50%,-50%) scale(.25) rotate(-10deg); }
+  to { opacity: 1; transform: translate(-50%,-50%) scale(1) rotate(0); }
+}
+@keyframes battle-drop-float {
+  0%,100% { translate: 0 -4px; }
+  50% { translate: 0 6px; }
+}
+@keyframes battle-drop-claim {
+  to { opacity: 0; transform: translate(-50%,-50%) scale(1.6); filter: brightness(2); }
+}
+@keyframes drop-ring { to { transform: rotate(360deg); } }
+
+body.blackout-wave #arena {
+  background-color: #02040b;
+  box-shadow: inset 0 0 100px rgba(0,0,0,.82), inset 0 0 25px rgba(109,69,255,.13);
+}
+body.blackout-wave .arena-grid { opacity: .15; }
+body.blackout-wave .enemy { filter: drop-shadow(0 0 7px rgba(149,93,255,.45)); }
+
+/* extra motion so the battlefield never feels visually dead */
+#arena::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: .16;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(71,239,255,.22) 0 1px, transparent 2px),
+    radial-gradient(circle at 75% 35%, rgba(255,233,90,.18) 0 1px, transparent 2px),
+    radial-gradient(circle at 45% 72%, rgba(255,80,190,.18) 0 1px, transparent 2px);
+  background-size: 210px 190px, 260px 230px, 180px 250px;
+  animation: battlefield-drift 12s linear infinite;
+}
+@keyframes battlefield-drift {
+  from { background-position: 0 0, 0 0, 0 0; }
+  to { background-position: 55px 90px, -70px 55px, 45px -80px; }
+}
