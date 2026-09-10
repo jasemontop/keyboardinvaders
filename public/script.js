@@ -1,3 +1,19 @@
+
+window.addEventListener("error", event => {
+  console.error("KEYBOARD INVADERS STARTUP ERROR:", event.error || event.message);
+  const box = document.getElementById("startup-error-box") || document.createElement("div");
+  box.id = "startup-error-box";
+  box.style.cssText = [
+    "position:fixed","left:12px","right:12px","bottom:12px","z-index:999999",
+    "padding:12px 14px","border-radius:10px","background:#5b0815","color:white",
+    "font:700 13px/1.4 system-ui","box-shadow:0 8px 30px rgba(0,0,0,.5)"
+  ].join(";");
+  box.textContent = "GAME ERROR: " + (event.message || "Unknown startup error");
+  if (!box.isConnected) document.body.appendChild(box);
+});
+
+console.log("%c KEYBOARD INVADERS BUILD: SESSION-FIX-2 ", "background:#111;color:#59f5ff;font-weight:bold;padding:4px");
+
 // ========================================================
 // SAVE DATA
 // ========================================================
@@ -61,6 +77,36 @@ const defaultUpgrades = {
   magnet: 1,
   bulletSpeed: 0
 };
+
+// Upgrade prices must exist before login/account loading can call renderShops().
+const upgradeCosts = {
+
+  damage:
+    8,
+
+  bullets:
+    25,
+
+  cooling:
+    12,
+
+  health:
+    10,
+
+  precision:
+    18,
+
+  crit:
+    26,
+
+  magnet:
+    30,
+
+  bulletSpeed:
+    35
+
+};
+
 
 let upgrades = {
   ...defaultUpgrades,
@@ -1638,12 +1684,6 @@ async function submitAccount() {
 async function checkAccount() {
   const statusName = document.getElementById("account-status-name");
 
-  if (accountToken && !guestMode && statusName) {
-    statusName.textContent = "CONNECTING...";
-  } else {
-    updateAccountStatus();
-  }
-
   if (guestMode) {
     username = "Guest";
     hideAccountOverlay();
@@ -1657,38 +1697,102 @@ async function checkAccount() {
 
   if (!accountToken) {
     showAccountOverlay("register");
+    updateAccountStatus();
     return;
   }
 
-  try {
-    const response = await apiFetch("/api/me", {
-      headers: { Authorization: `Bearer ${accountToken}` }
-    });
-
-    if (!response.ok) throw new Error("Session expired");
-
-    const data = await response.json();
-
-    if (data.player) {
-      username = data.player.username || username;
-      localStorage.setItem("kiUsername3", username);
-      applyOnlinePlayer(data.player);
-    }
-
-    hideAccountOverlay();
+  // Use the last known username immediately while the server reconnects.
+  const rememberedUsername = localStorage.getItem("kiUsername3") || username;
+  if (rememberedUsername) {
+    username = rememberedUsername;
     updateUsernameUI();
-    updateAccountStatus();
-    loadQuests();
-    startLiveUpdates();
-    showTutorial("lobby");
   }
-  catch (error) {
-    console.warn("Account check failed:", error.message);
-    accountToken = "";
-    localStorage.removeItem("kiAccountToken3");
-    updateAccountStatus();
-    showAccountOverlay("login");
+
+  if (statusName) {
+    statusName.textContent = username
+      ? `${username.toUpperCase()} • CONNECTING`
+      : "CONNECTING...";
   }
+
+  let lastError = null;
+
+  // Render free services can take a moment to wake after inactivity.
+  // Retry a few times instead of instantly deleting a perfectly good login.
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response = await apiFetch("/api/me", {
+        headers: { Authorization: `Bearer ${accountToken}` }
+      }, 30000);
+
+      if (response.status === 401 || response.status === 403 || response.status === 404) {
+        const data = await response.json().catch(() => ({}));
+        const invalidSession = new Error(data.error || "Session expired");
+        invalidSession.invalidSession = true;
+        throw invalidSession;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Server temporarily unavailable (${response.status})`);
+      }
+
+      const data = await response.json();
+
+      if (data.player) {
+        username = data.player.username || username || rememberedUsername;
+        localStorage.setItem("kiUsername3", username);
+        applyOnlinePlayer(data.player);
+      }
+
+      hideAccountOverlay();
+      updateUsernameUI();
+      updateAccountStatus();
+      loadQuests();
+      startLiveUpdates();
+      showTutorial("lobby");
+      return;
+    }
+    catch (error) {
+      lastError = error;
+
+      if (error.invalidSession) {
+        console.warn("Saved session is no longer valid:", error.message);
+        accountToken = "";
+        localStorage.removeItem("kiAccountToken3");
+        updateAccountStatus();
+        usernameInput.value = rememberedUsername || "";
+        showAccountOverlay("login");
+        return;
+      }
+
+      console.warn(`Account reconnect attempt ${attempt} failed:`, error.message);
+
+      if (attempt < 3) {
+        await new Promise(resolve => setTimeout(resolve, attempt * 1200));
+      }
+    }
+  }
+
+  // IMPORTANT: temporary network/server failure does NOT log the player out.
+  // Keep their name + token and show reconnecting instead.
+  console.warn("Could not verify account yet:", lastError?.message || "Unknown error");
+
+  hideAccountOverlay();
+  updateUsernameUI();
+
+  if (statusName) {
+    statusName.textContent = username
+      ? `${username.toUpperCase()} • RECONNECTING`
+      : "RECONNECTING...";
+  }
+
+  loadQuests();
+
+  // Try again later without forcing the user to log back in.
+  setTimeout(() => {
+    if (accountToken && !guestMode) {
+      checkAccount();
+    }
+  }, 5000);
 }
 
 function applyOnlinePlayer(player) {
@@ -3832,33 +3936,6 @@ function closeStatsPanel() {
 // UPGRADES
 // ========================================================
 
-const upgradeCosts = {
-
-  damage:
-    8,
-
-  bullets:
-    25,
-
-  cooling:
-    12,
-
-  health:
-    10,
-
-  precision:
-    18,
-
-  crit:
-    26,
-
-  magnet:
-    30,
-
-  bulletSpeed:
-    35
-
-};
 
 
 function getUpgradeCost(
@@ -10637,5 +10714,22 @@ updateLobby();
 renderShops();
 
 applyLoadoutVisuals();
+
+// Restore the remembered account name immediately so refresh never flashes
+// COMMANDER / OFFLINE while the server is waking up.
+if (accountToken && !guestMode) {
+  const rememberedUsername = localStorage.getItem("kiUsername3") || username;
+  if (rememberedUsername) {
+    username = rememberedUsername;
+  }
+  updateUsernameUI();
+
+  const statusName = document.getElementById("account-status-name");
+  if (statusName) {
+    statusName.textContent = username
+      ? `${username.toUpperCase()} • CONNECTING`
+      : "CONNECTING...";
+  }
+}
 
 checkAccount();
