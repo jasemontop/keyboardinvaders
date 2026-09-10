@@ -6834,28 +6834,26 @@ function triggerOverheat() {
 
 function gameLoop() {
 
-  if (
-    running
-  ) {
+  try {
+    if (running) {
+      moveBullets();
 
-    moveBullets();
+      const tutorialIsHoldingEnemies =
+        practiceTutorialActive &&
+        !practiceTutorialComplete;
 
-    const tutorialIsHoldingEnemies =
-      practiceTutorialActive &&
-      !practiceTutorialComplete;
+      if (!tutorialIsHoldingEnemies) {
+        moveEnemies();
+      }
 
-    if (!tutorialIsHoldingEnemies) {
-      moveEnemies();
+      collisions();
     }
-
-    collisions();
-
+  } catch (error) {
+    // A single bad enemy/boss callback must never permanently stop the game loop.
+    console.error("Game loop recovered from an error:", error);
+  } finally {
+    requestAnimationFrame(gameLoop);
   }
-
-
-  requestAnimationFrame(
-    gameLoop
-  );
 
 }
 
@@ -6939,8 +6937,9 @@ function bossJamKeys(count = 2, duration = 4200) {
     const key = available.splice(index, 1)[0];
     if (!key) continue;
 
-    const letter = key.dataset.key || key.textContent.trim().charAt(0);
-    if (letter) jamKey(letter, duration);
+    // IMPORTANT: jamKey expects the DOM key element, not a letter string.
+    // Passing the letter caused "key.classList" errors during boss phases.
+    jamKey(key, duration);
   }
 }
 
@@ -7663,7 +7662,8 @@ function launchEnemyShot(
 // ========================================================
 
 function jamKey(
-  key
+  key,
+  duration = 5000
 ) {
 
   if (
@@ -7701,8 +7701,7 @@ function jamKey(
     performance.now();
 
 
-  const duration =
-    5000;
+  const safeDuration = Math.max(250, Number(duration) || 5000);
 
 
   const timer =
@@ -7711,7 +7710,7 @@ function jamKey(
       () => {
 
         const remaining =
-          duration
+          safeDuration
           -
           (
             performance.now()
