@@ -278,8 +278,16 @@
       </h2>
 
 
-      <div class="rank-chip">
-        ORBITAL DEFENDER
+      <div class="rank-chip" id="career-rank-chip">
+        ⌨️ ROOKIE
+      </div>
+
+      <div class="career-progress-card">
+        <div class="career-progress-head">
+          <span>LEVEL <b id="career-level">1</b></span>
+          <span id="career-xp-text">0 / 120 XP</span>
+        </div>
+        <div class="career-xp-track"><div id="career-xp-fill"></div></div>
       </div>
 
 
@@ -543,7 +551,7 @@
             <div>
 
               <small>
-                COOLING
+                COOLING RESIST
               </small>
 
               <strong>
@@ -1252,7 +1260,13 @@
       <strong id="game-username">
         COMMANDER
       </strong>
+      <span id="game-nametag">⌨️ ROOKIE</span>
 
+    </div>
+
+    <div class="hud-career">
+      <small>LV.<span id="game-level">1</span></small>
+      <div class="mini-xp-track"><div id="game-xp-fill"></div></div>
     </div>
 
   </header>
@@ -1355,6 +1369,12 @@
         ×<span id="combo">0</span>
       </div>
 
+    </div>
+
+    <div class="hud-card overdrive-card">
+      <small>OVERDRIVE</small>
+      <b id="overdrive-text">0%</b>
+      <div class="overdrive-track"><div id="overdrive-fill"></div></div>
     </div>
 
 
