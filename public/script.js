@@ -960,17 +960,30 @@ function getCareerProgress() {
 
 function checkCareerLevelUp() {
   const now = getCareerLevel();
+
   if (now > lastKnownCareerLevel) {
-    const tag = getCareerTag(now);
+    const oldTag = getCareerTag(lastKnownCareerLevel);
+    const newTag = getCareerTag(now);
+    const gotNewTag = oldTag.name !== newTag.name;
+
     showGameNotification(
       `⬆ LEVEL ${now}!`,
-      `${tag.icon} ${tag.name} — new nametag reached!`,
+      gotNewTag
+        ? `${newTag.icon} NEW NAMETAG: ${newTag.name}!`
+        : `Nice! You reached level ${now}.`,
       "quest"
     );
-    showAnnouncement(`LEVEL ${now}`, `${tag.icon} ${tag.name}`, 3000);
+
+    showAnnouncement(
+      `LEVEL ${now}!`,
+      gotNewTag ? `${newTag.icon} NEW NAMETAG: ${newTag.name}` : "KEEP GOING!",
+      gotNewTag ? 3300 : 1900
+    );
+
     playSuccessSound();
     flashyPulse("upgrade");
   }
+
   lastKnownCareerLevel = now;
 }
 
@@ -985,7 +998,7 @@ function activateOverdrive() {
   overdriveActive = true;
   overdriveCharge = 100;
   document.body.classList.add("overdrive-active");
-  showAnnouncement("⚡ OVERDRIVE ⚡", "2X DAMAGE • LOW HEAT • BONUS CASH", 3200);
+  showAnnouncement("⚡ POWER MODE! ⚡", "2X DAMAGE • LESS HEAT • EXTRA MONEY", 3200);
   tone(160, .22, "sawtooth", .025, 720);
   particles(arena.clientWidth / 2, arena.clientHeight * .72, 36, "spark");
   clearTimeout(overdriveTimer);
@@ -993,18 +1006,18 @@ function activateOverdrive() {
     overdriveActive = false;
     overdriveCharge = 0;
     document.body.classList.remove("overdrive-active");
-    showGameNotification("OVERDRIVE ENDED", "Charge it again with kills and combos.", "info");
+    showGameNotification("POWER MODE ENDED", "Get kills and combos to fill the bar again.", "info");
     updateHUD();
   }, 8500);
   updateHUD();
 }
 
 const battleDropTypes = [
-  { id: "coolant", icon: "❄️", name: "COOLANT", text: "HEAT RESET", className: "drop-coolant" },
-  { id: "shield", icon: "🛡️", name: "SHIELD PACK", text: "+35% SHIELD", className: "drop-shield" },
-  { id: "emp", icon: "💥", name: "EMP", text: "DAMAGE ALL ENEMIES", className: "drop-emp" },
-  { id: "bounty", icon: "🪙", name: "BOUNTY CHIP", text: "2X CASH FOR 12S", className: "drop-bounty" },
-  { id: "rapid", icon: "⚡", name: "TURBO CORE", text: "LESS HEAT + SPEED", className: "drop-rapid" }
+  { id: "coolant", icon: "❄️", name: "COOL DOWN", text: "REMOVES ALL HEAT", className: "drop-coolant" },
+  { id: "shield", icon: "❤️", name: "HEAL", text: "GET 35% HEALTH BACK", className: "drop-shield" },
+  { id: "emp", icon: "💥", name: "SCREEN BLAST", text: "HITS EVERY ENEMY", className: "drop-emp" },
+  { id: "bounty", icon: "🪙", name: "2X MONEY", text: "DOUBLE MONEY FOR 12S", className: "drop-bounty" },
+  { id: "rapid", icon: "⚡", name: "RAPID FIRE", text: "SHOOT FASTER + LESS HEAT", className: "drop-rapid" }
 ];
 
 function scheduleBattleDrop() {
@@ -2395,22 +2408,24 @@ let tutorialStep = 0;
 let tutorialPart = "lobby";
 
 const lobbyTutorialSteps = [
-  { target: "#start-run", title: "START A RUN", text: "Press this when you are ready to fight enemies." },
-  { target: ".upgrade-strip", title: "UPGRADES", text: "Spend coins here to make your damage, health, and other stats better." },
-  { target: '[data-menu="guns"]', title: "GUNS", text: "Buy stronger guns and equip the one you want to use." },
-  { target: '[data-menu="drones"]', title: "DRONES", text: "Drones help you during a run. Each one gives a different bonus." },
-  { target: '[data-menu="keyboards"]', title: "KEYBOARDS", text: "Keyboards change your stats and the look of your setup." },
-  { target: '[data-menu="quests"]', title: "QUESTS", text: "Finish simple goals to earn extra coins. Come back here to claim them." },
-  { target: '[data-menu="rebirth"]', title: "REBIRTH", text: "Later, you can reset some progress to get permanent bonuses." },
-  { target: "#open-leaderboard", title: "LEADERBOARD", text: "See the best players for waves, kills, and coins." }
+  { target: "#start-run", title: "PLAY", text: "Press PLAY to start fighting enemies." },
+  { target: ".upgrade-strip", title: "GET STRONGER", text: "Spend coins on upgrades. Cooling makes heat go up slower. Extra Shots lets you fire more bullets." },
+  { target: "[data-open-stats]", title: "YOUR BUFFS", text: "Press STATS any time to see exactly what every upgrade is doing for you." },
+  { target: '[data-menu="guns"]', title: "GUNS", text: "Buy guns, then equip the one you want." },
+  { target: '[data-menu="drones"]', title: "DRONES", text: "Drones fight with you and give extra bonuses." },
+  { target: '[data-menu="keyboards"]', title: "KEYBOARDS", text: "Keyboards give you extra health and help with heat." },
+  { target: ".career-card", title: "LEVEL UP", text: "Kills and higher waves raise your level. Some levels unlock a new nametag." },
+  { target: '[data-menu="quests"]', title: "QUESTS", text: "Finish goals for bonus coins." },
+  { target: '[data-menu="rebirth"]', title: "REBIRTH", text: "Much later, rebirth resets some progress but gives permanent power." }
 ];
 
 const gameTutorialSteps = [
-  { target: ".game-hud", title: "YOUR RUN", text: "This shows your wave, kills, coins, and name." },
-  { target: ".game-left", title: "YOUR STATS", text: "Shield is your health. Heat goes up when you shoot. Precision affects your shots." },
-  { target: ".game-right", title: "WAVE INFO", text: "This shows your combo, danger level, current event, and quest progress." },
-  { target: "#arena", title: "ENEMIES", text: "Enemies move toward your keyboard. Stop them before they reach it." },
-  { target: "#keyboard-zone", title: "TYPE TO SHOOT", text: "Press the matching keyboard keys to shoot. Wrong keys can break your streak." }
+  { target: ".game-hud", title: "YOUR RUN", text: "Up here you can see your wave, kills, money, level, and name." },
+  { target: ".game-left", title: "HEALTH + HEAT", text: "Health keeps you alive. Shooting adds heat. If heat reaches 100%, your gun overheats." },
+  { target: ".overdrive-card", title: "POWER MODE", text: "Get kills to fill this bar. At 100%, POWER MODE turns on and makes you much stronger for a few seconds." },
+  { target: "#arena", title: "POWER-UPS", text: "Helpful drops sometimes appear here. Click them before they disappear. Their text tells you exactly what they do." },
+  { target: "#keyboard-zone", title: "TYPE TO SHOOT", text: "Press the matching keyboard keys to shoot enemies before they reach your keyboard." },
+  { target: ".run-controls", title: "RUN CONTROLS", text: "STATS shows your buffs. DIE ends the run. LEAVE saves and sends you straight back to the lobby." }
 ];
 
 function positionTutorial(step) {
@@ -3634,6 +3649,82 @@ function equipItem(
 
 }
 
+
+
+// ========================================================
+// PLAYER BUFF STATS
+// ========================================================
+
+function getPlayerBuffStats() {
+  const gun = guns[equipped.gun] || guns.pulse;
+  const board = keyboards[equipped.keyboard] || keyboards.standard;
+  const drone = equipped.drone && drones[equipped.drone] ? drones[equipped.drone] : null;
+
+  const coolingLevel = Math.max(1, Number(upgrades.cooling) || 1);
+  const coolingResistance =
+    1 +
+    Math.max(0, coolingLevel - 1) * 0.14 +
+    Math.sqrt(Math.max(0, coolingLevel - 1)) * 0.07 +
+    Math.max(0, board.cooling || 0) * 0.055;
+
+  const heatReduction = Math.max(0, (1 - 1 / coolingResistance) * 100);
+  const damageMultiplier =
+    1 +
+    Math.max(0, upgrades.damage - 1) * 0.18 +
+    Math.pow(Math.max(0, upgrades.damage - 10), 1.08) * 0.025;
+
+  const healthBonus =
+    upgrades.health * 24 +
+    Math.pow(Math.max(0, upgrades.health - 12), 1.15) * 6 +
+    Number(board.shield || 0);
+
+  const critChance = Math.min(75, 4 + Math.max(0, upgrades.crit - 1) * 2.25);
+  const precisionBonus = Math.min(70, Math.max(0, upgrades.precision - 1) * 3.5);
+  const moneyBonus =
+    (Math.min(upgrades.magnet, 20) * 0.075 +
+    Math.sqrt(Math.max(0, upgrades.magnet - 20)) * 0.08) * 100;
+
+  const speedLevel = Math.max(0, Number(upgrades.bulletSpeed) || 0);
+  const bulletSpeedBonus =
+    (Math.min(speedLevel, 15) * 0.14 +
+    Math.sqrt(Math.max(0, speedLevel - 15)) * 0.12) * 100;
+
+  return [
+    ["💥 Damage", `+${Math.round((damageMultiplier - 1) * 100)}%`, `LV ${upgrades.damage}`],
+    ["🔫 Extra Shots", `${Math.max(1, upgrades.bullets)} shots`, `LV ${upgrades.bullets}/10`],
+    ["❄️ Cooling", `${Math.round(heatReduction)}% slower heat`, `LV ${upgrades.cooling}`],
+    ["❤️ Health", `+${Math.round(healthBonus)} HP`, `LV ${upgrades.health}`],
+    ["🎯 Precision", `+${Math.round(precisionBonus)}% help`, `LV ${upgrades.precision}`],
+    ["💢 Critical Hit", `${Math.round(critChance)}% chance`, `LV ${upgrades.crit}`],
+    ["🪙 Money Boost", `+${Math.round(moneyBonus)}% coins`, `LV ${upgrades.magnet}`],
+    ["🚀 Bullet Speed", `+${Math.round(bulletSpeedBonus)}% speed`, `LV ${upgrades.bulletSpeed}`],
+    ["🔫 Gun", gun.name, "EQUIPPED"],
+    ["⌨️ Keyboard", board.name, "EQUIPPED"],
+    ["🤖 Drone", drone ? drone.name : "None", "EQUIPPED"]
+  ];
+}
+
+function renderStatsPanel() {
+  const list = document.getElementById("stats-list");
+  if (!list) return;
+  list.innerHTML = getPlayerBuffStats().map(([name, value, level]) => `
+    <div class="buff-stat-row">
+      <div><b>${name}</b><small>${level}</small></div>
+      <strong>${value}</strong>
+    </div>
+  `).join("");
+}
+
+function openStatsPanel() {
+  renderStatsPanel();
+  const panel = document.getElementById("stats-panel");
+  if (panel) panel.classList.add("show");
+}
+
+function closeStatsPanel() {
+  const panel = document.getElementById("stats-panel");
+  if (panel) panel.classList.remove("show");
+}
 
 // ========================================================
 // UPGRADES
@@ -5958,11 +6049,13 @@ function attemptShoot(
 
   const board = keyboards[equipped.keyboard] || keyboards.standard;
   const coolingLevel = Math.max(1, Number(upgrades.cooling) || 1);
+  // COOLING = how slowly HEAT GOES UP.
+  // This scales strongly so buying many levels is immediately noticeable.
   const coolingResistance =
     1 +
-    Math.max(0, coolingLevel - 1) * 0.085 +
-    Math.sqrt(Math.max(0, coolingLevel - 1)) * 0.035 +
-    Math.max(0, board.cooling || 0) * 0.04;
+    Math.max(0, coolingLevel - 1) * 0.14 +
+    Math.sqrt(Math.max(0, coolingLevel - 1)) * 0.07 +
+    Math.max(0, board.cooling || 0) * 0.055;
 
   let heatGain =
     (7.5 + Math.max(0, upgrades.bullets - 1)) * gun.heat;
@@ -5971,7 +6064,7 @@ function attemptShoot(
   if (overdriveActive) heatGain *= 0.38;
   if (performance.now() < rapidFireUntil) heatGain *= 0.55;
 
-  heat += Math.max(0.35, heatGain);
+  heat += Math.max(0.18, heatGain);
 
 
   if (
@@ -9819,6 +9912,47 @@ function addKillFeed(
 
 }
 
+
+
+// ========================================================
+// STATS + IN-RUN CONTROLS
+// ========================================================
+
+document.querySelectorAll("[data-open-stats]").forEach(button => {
+  button.addEventListener("click", openStatsPanel);
+});
+
+document.getElementById("close-stats")?.addEventListener("click", closeStatsPanel);
+document.getElementById("stats-panel")?.addEventListener("click", event => {
+  if (event.target.id === "stats-panel") closeStatsPanel();
+});
+
+document.getElementById("run-die")?.addEventListener("click", () => {
+  if (!running) return;
+  if (confirm("End this run? Your progress will still save.")) die();
+});
+
+document.getElementById("run-leave")?.addEventListener("click", () => {
+  if (!running) return;
+  if (!confirm("Leave this run and go back to the lobby? Your progress will still save.")) return;
+
+  running = false;
+  clearInterval(droneTimer);
+  clearTimeout(floatingCoinTimer);
+  clearTimeout(battleDropTimer);
+  clearTimeout(overdriveTimer);
+  document.body.classList.remove("overdrive-active");
+
+  bestWave = Math.max(bestWave, wave);
+  checkCareerLevelUp();
+  saveImportantChange();
+
+  game.classList.remove("active");
+  lobby.classList.add("active");
+  clearArena();
+  updateLobby();
+  renderShops();
+});
 
 // ========================================================
 // DEATH
