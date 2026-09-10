@@ -5727,3 +5727,102 @@ body.keyboard-attack #game::after { animation:keyAttack .55s ease; }
   height: 210px;
   background: rgba(71,239,255,.28);
 }
+
+
+/* ===================================================== */
+/* FLASHY GAME JUICE + NEW COLLECTION STYLES             */
+/* ===================================================== */
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 4200;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at center, rgba(71,239,255,.22), transparent 58%);
+}
+
+body.fx-hit::after,
+body.fx-kill::after,
+body.fx-drone::after,
+body.fx-upgrade::after,
+body.fx-crit::after,
+body.fx-boss::after {
+  animation: screen-flash .26s ease-out;
+}
+
+body.fx-crit::after {
+  background: radial-gradient(circle at center, rgba(255,233,90,.34), transparent 56%);
+}
+
+body.fx-upgrade::after {
+  background: radial-gradient(circle at center, rgba(84,255,161,.28), transparent 58%);
+}
+
+body.fx-boss::after {
+  background: radial-gradient(circle at center, rgba(255,66,118,.42), transparent 64%);
+  animation-duration: .52s;
+}
+
+body.fx-crit #arena,
+body.fx-boss #arena {
+  animation: impact-shake .18s linear;
+}
+
+body.fx-kill #arena {
+  animation: micro-impact .14s ease-out;
+}
+
+@keyframes screen-flash {
+  0% { opacity: 0; }
+  22% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes impact-shake {
+  0%,100% { transform: translate(0,0); }
+  25% { transform: translate(-3px,2px); }
+  50% { transform: translate(3px,-2px); }
+  75% { transform: translate(-2px,-1px); }
+}
+
+@keyframes micro-impact {
+  0%,100% { transform: scale(1); }
+  45% { transform: scale(1.003); }
+}
+
+.shop-item {
+  isolation: isolate;
+}
+
+.shop-item::after {
+  content: "";
+  position: absolute;
+  inset: -40% -80%;
+  pointer-events: none;
+  opacity: 0;
+  transform: rotate(18deg) translateX(-35%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.08), transparent);
+  transition: opacity .2s;
+}
+
+.shop-item:hover::after {
+  opacity: 1;
+  animation: shop-sheen 1.05s ease;
+}
+
+@keyframes shop-sheen {
+  from { transform: rotate(18deg) translateX(-45%); }
+  to { transform: rotate(18deg) translateX(45%); }
+}
+
+.quick-upgrade strong {
+  text-shadow: 0 0 12px rgba(71,239,255,.28);
+}
+
+.keycap-plasma { background: linear-gradient(135deg,#6528ff,#ff47d7) !important; box-shadow: 0 0 16px rgba(166,71,255,.45) !important; }
+.keycap-toxic { background: linear-gradient(135deg,#163d1e,#7cff38) !important; color:#071407 !important; box-shadow: 0 0 16px rgba(124,255,56,.4) !important; }
+.keycap-ember { background: linear-gradient(135deg,#6b160e,#ff7a21) !important; box-shadow: 0 0 16px rgba(255,96,32,.42) !important; }
+.keycap-ice { background: linear-gradient(135deg,#d8fbff,#46cfff) !important; color:#06202a !important; box-shadow: 0 0 16px rgba(70,207,255,.42) !important; }
+.keycap-royal { background: linear-gradient(135deg,#5b3500,#ffd84d,#fff1a3) !important; color:#291800 !important; box-shadow: 0 0 18px rgba(255,216,77,.5) !important; }
