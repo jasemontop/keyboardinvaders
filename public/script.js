@@ -5,6 +5,35 @@
 const bootGuestMode = localStorage.getItem("kiGuestMode3") === "true";
 const localKey = (normalKey, guestKey) => bootGuestMode ? guestKey : normalKey;
 
+
+const gameSettings = {
+  sound: localStorage.getItem("kiSettingSound5") !== "off",
+  volume: Math.max(0, Math.min(1, Number(localStorage.getItem("kiSettingVolume5") ?? 1))),
+  shake: localStorage.getItem("kiSettingShake5") !== "off",
+  flashes: localStorage.getItem("kiSettingFlashes5") !== "soft",
+  rareFx: localStorage.getItem("kiSettingRareFx5") !== "off"
+};
+
+const killEffects = {
+  burst: { name: "ENERGY BURST", icon: "💥", rarity: "COMMON", className: "killfx-burst" },
+  pixel: { name: "PIXEL POP", icon: "🟪", rarity: "RARE", className: "killfx-pixel" },
+  frost: { name: "FROST SHATTER", icon: "❄️", rarity: "EPIC", className: "killfx-frost" },
+  inferno: { name: "INFERNO", icon: "🔥", rarity: "LEGENDARY", className: "killfx-inferno" },
+  voidrift: { name: "VOID RIFT", icon: "💠", rarity: "MYTHIC", className: "killfx-mythic" }
+};
+
+let ownedKillEffects =
+  JSON.parse(localStorage.getItem("kiOwnedKillEffects5")) || ["burst"];
+
+let equippedKillEffect =
+  localStorage.getItem("kiEquippedKillEffect5") || "burst";
+
+function saveKillEffects() {
+  localStorage.setItem("kiOwnedKillEffects5", JSON.stringify(ownedKillEffects));
+  localStorage.setItem("kiEquippedKillEffect5", equippedKillEffect);
+}
+
+
 let username =
   localStorage.getItem(
     localKey("kiUsername3", "kiGuestUsername3")
@@ -2536,6 +2565,9 @@ function tone(
   endFrequency = null
 ) {
 
+  if (!gameSettings.sound || gameSettings.volume <= 0) return;
+  volume *= gameSettings.volume;
+
   try {
 
     const ctx =
@@ -4254,6 +4286,113 @@ document
 
 
 // ========================================================
+
+// ========================================================
+// KILL EFFECT CRATE
+// ========================================================
+
+const killEffectCratePrice = 2500;
+
+function rollKillEffect() {
+  const roll = Math.random() * 100;
+
+  if (roll < 1) return "voidrift";
+  if (roll < 6) return "inferno";
+  if (roll < 18) return "frost";
+  if (roll < 45) return "pixel";
+  return "burst";
+}
+
+function renderKillEffects() {
+  const holder = document.getElementById("kill-effect-collection");
+  if (!holder) return;
+
+  holder.innerHTML = Object.entries(killEffects).map(([id, effect]) => {
+    const ownedFx = ownedKillEffects.includes(id);
+    const equippedFx = equippedKillEffect === id;
+
+    return `
+      <button class="kill-effect-chip ${ownedFx ? "owned" : "locked"} ${equippedFx ? "equipped" : ""}"
+        data-kill-effect="${id}" ${ownedFx ? "" : "disabled"}>
+        <span>${effect.icon}</span>
+        <div><small>${effect.rarity}</small><b>${effect.name}</b></div>
+        <em>${equippedFx ? "EQUIPPED" : ownedFx ? "EQUIP" : "LOCKED"}</em>
+      </button>
+    `;
+  }).join("");
+
+  holder.querySelectorAll("[data-kill-effect]").forEach(button => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.killEffect;
+
+      if (!ownedKillEffects.includes(id)) return;
+
+      equippedKillEffect = id;
+      saveKillEffects();
+      renderKillEffects();
+      playSuccessSound();
+    });
+  });
+}
+
+document.getElementById("kill-crate-info")?.addEventListener("click", () => {
+  document.getElementById("kill-crate-info-overlay")?.classList.add("show");
+});
+
+document.getElementById("close-kill-crate-info")?.addEventListener("click", () => {
+  document.getElementById("kill-crate-info-overlay")?.classList.remove("show");
+});
+
+document.getElementById("open-kill-crate")?.addEventListener("click", () => {
+  if (coins < killEffectCratePrice) {
+    flashCoinBalance();
+    playErrorSound();
+    return;
+  }
+
+  coins -= killEffectCratePrice;
+
+  const id = rollKillEffect();
+  const effect = killEffects[id];
+
+  if (ownedKillEffects.includes(id)) {
+    const duplicateCoins = {
+      burst: 350,
+      pixel: 700,
+      frost: 1400,
+      inferno: 2800,
+      voidrift: 7500
+    }[id] || 350;
+
+    coins += duplicateCoins;
+
+    showGameNotification(
+      `💥 ${effect.rarity} DUPLICATE`,
+      `${effect.name} → 🪙${duplicateCoins.toLocaleString()}`,
+      "quest"
+    );
+  } else {
+    ownedKillEffects.push(id);
+    equippedKillEffect = id;
+    saveKillEffects();
+
+    showGameNotification(
+      `${effect.icon} ${effect.rarity} KILL EFFECT!`,
+      `${effect.name} UNLOCKED + EQUIPPED`,
+      "quest"
+    );
+  }
+
+  flashyPulse(id === "voidrift" ? "boss" : "upgrade");
+  playCrateSound();
+  saveImportantChange();
+  renderKillEffects();
+});
+
+renderKillEffects();
+
+
+
 // REBIRTH
 // ========================================================
 
@@ -5389,6 +5528,21 @@ function spawnEnemy(
     );
 
 
+  let rareTier = null;
+
+  if (!boss) {
+    const roll = Math.random();
+
+    if (roll < 0.0025) {
+      rareTier = "MYTHIC";
+    } else if (roll < 0.0125) {
+      rareTier = "GLITCHED";
+    } else if (roll < 0.0425) {
+      rareTier = "GOLDEN";
+    }
+  }
+
+
   const difficulty =
     getDifficulty();
 
@@ -5559,6 +5713,25 @@ function spawnEnemy(
   }
 
 
+  if (rareTier === "GOLDEN") {
+    hp *= 2.25;
+    speed *= 1.08;
+    reward *= 8;
+  }
+
+  if (rareTier === "GLITCHED") {
+    hp *= 4.5;
+    speed *= 1.32;
+    reward *= 22;
+  }
+
+  if (rareTier === "MYTHIC") {
+    hp *= 9;
+    speed *= 1.5;
+    reward *= 65;
+  }
+
+
   hp =
     Math.round(
       hp
@@ -5589,7 +5762,7 @@ function spawnEnemy(
         "boss"
         :
         ""
-    }`;
+    }${rareTier ? ` rare-enemy-${rareTier.toLowerCase()}` : ""}`;
 
 
   element.innerHTML = `
@@ -5604,6 +5777,18 @@ function spawnEnemy(
             `
             <span class="enemy-tag elite-tag">
               ★ ELITE
+            </span>
+            `
+            :
+            ""
+        }
+
+        ${
+          rareTier
+            ?
+            `
+            <span class="enemy-tag rare-${rareTier.toLowerCase()}">
+              ${rareTier === "GOLDEN" ? "🟡" : rareTier === "GLITCHED" ? "🟣" : "💠"} ${rareTier}
             </span>
             `
             :
@@ -5745,6 +5930,8 @@ function spawnEnemy(
 
     elite,
 
+    rareTier,
+
     shooter,
 
     level,
@@ -5808,7 +5995,8 @@ function spawnEnemy(
       false,
 
     bossNumber,
-    phase2: false,
+    bossPhase: 1,
+    triggeredBossPhases: [],
     abilityBusy: false
 
   };
@@ -5822,6 +6010,22 @@ function spawnEnemy(
   updateEnemyUI(
     enemy
   );
+
+
+  if (rareTier === "MYTHIC") {
+    showAnnouncement("⚠️ MYTHIC ENEMY SPAWNED! ⚠️", "EXTREME THREAT • MASSIVE REWARD", 4200);
+
+    if (gameSettings.rareFx) {
+      document.body.classList.add("mythic-spawn-flash");
+      setTimeout(() => document.body.classList.remove("mythic-spawn-flash"), 1300);
+    }
+  } else if (rareTier === "GLITCHED" && gameSettings.rareFx) {
+    showAnnouncement("⚠ GLITCHED ENEMY ⚠", "UNSTABLE TARGET • HUGE REWARD", 2800);
+    document.body.classList.add("glitched-spawn-flash");
+    setTimeout(() => document.body.classList.remove("glitched-spawn-flash"), 850);
+  } else if (rareTier === "GOLDEN" && gameSettings.rareFx) {
+    combatText(enemy.x + 20, enemy.y, "GOLDEN!", "special-text");
+  }
 
 
   renderEnemy(
@@ -6523,61 +6727,188 @@ function moveBullets() {
 // BOSS MECHANICS
 // ========================================================
 
-function bossAbility(enemy, left, right) {
-  if (!enemy.boss || enemy.abilityBusy || performance.now() < enemy.nextAbility) return;
-  enemy.abilityBusy = true;
-  const type = ((enemy.bossNumber - 1) % 5) + 1;
-  const delay = Math.max(1800, 4300 - enemy.bossNumber * 180);
-  enemy.nextAbility = performance.now() + delay;
+function bossJamKeys(count = 2, duration = 4200) {
+  const available = Array.from(document.querySelectorAll(".key:not(.jammed)"));
 
-  if (type === 1) {
-    showAnnouncement("⚠ BOSS MOVE: CHARGE ⚠", "THE BOSS IS RUSHING AT YOU. MOVE!", 3200);
-    enemy.speed = enemy.baseSpeed * 2.2;
+  for (let i = 0; i < Math.min(count, available.length); i++) {
+    const key = randomItem(available);
+    const index = available.indexOf(key);
+
+    if (index >= 0) available.splice(index, 1);
+
+    const letter = key.dataset.key || key.textContent.trim().charAt(0);
+    jamKey(letter, duration);
+  }
+}
+
+function bossSummonMinions(amount = 2) {
+  enemiesRemaining += amount;
+
+  for (let i = 0; i < amount; i++) {
     setTimeout(() => {
-      if (enemies.includes(enemy)) enemy.speed = enemy.baseSpeed * (enemy.phase2 ? 1.35 : 1);
-      enemy.abilityBusy = false;
-    }, 1200);
-    return;
+      if (running) spawnEnemy();
+    }, i * 220);
+  }
+}
+
+function bossProjectileStorm(enemy, amount = 3) {
+  for (let i = 0; i < amount; i++) {
+    setTimeout(() => {
+      if (running && enemies.includes(enemy)) {
+        enemyShoot(enemy);
+      }
+    }, i * 240);
+  }
+}
+
+function enterBossPhase(enemy, threshold) {
+  if (!enemy.boss || enemy.triggeredBossPhases.includes(threshold)) return;
+
+  enemy.triggeredBossPhases.push(threshold);
+
+  if (threshold === 75) {
+    enemy.bossPhase = 2;
+    enemy.baseSpeed *= 1.12;
+    enemy.speed = enemy.baseSpeed;
+    enemy.damage = Math.round(enemy.damage * 1.08);
+    enemy.element.classList.add("boss-phase-two");
+
+    showAnnouncement(
+      "⚠ BOSS PHASE 2 ⚠",
+      "KEY JAM + MINION REINFORCEMENTS",
+      3400
+    );
+
+    bossJamKeys(2, 4000);
+    bossSummonMinions(2);
   }
 
-  if (type === 2) {
-    showAnnouncement("⚠ BOSS MOVE: HEAL ⚠", "THE BOSS GOT SOME HEALTH BACK.", 3200);
-    enemy.hp = Math.min(enemy.maxHp, enemy.hp + enemy.maxHp * 0.08);
-    updateEnemyUI(enemy);
-    updateBossBar(enemy);
-  } else if (type === 3) {
-    showAnnouncement("⚠ BOSS MOVE: DOUBLE SHOT ⚠", "THE BOSS ATTACKS TWICE. WATCH OUT!", 3200);
-    enemyShoot(enemy);
-    setTimeout(() => enemies.includes(enemy) && enemyShoot(enemy), 500);
-  } else if (type === 4) {
-    showAnnouncement("⚠ BOSS MOVE: TELEPORT ⚠", "THE BOSS MOVED TO A NEW SPOT.", 3200);
-    enemy.x = randomNumber(left, Math.max(left, right));
-    combatText(enemy.x, enemy.y, "TELEPORT!", "special-text");
-  } else {
-    showAnnouncement("⚠ BOSS MOVE: BACKUP ⚠", "MORE ENEMIES ARE JOINING THE FIGHT.", 3200);
-    enemiesRemaining += 2;
-    spawnEnemy();
-    setTimeout(() => running && spawnEnemy(), 300);
+  if (threshold === 50) {
+    enemy.bossPhase = 3;
+    enemy.baseSpeed *= 1.16;
+    enemy.speed = enemy.baseSpeed;
+    enemy.damage = Math.round(enemy.damage * 1.14);
+    enemy.element.classList.add("boss-phase-three");
+
+    showAnnouncement(
+      "⚠ BOSS PHASE 3 ⚠",
+      "PROJECTILE STORM + HEAVIER ATTACKS",
+      3500
+    );
+
+    bossProjectileStorm(enemy, 4);
   }
 
-  setTimeout(() => { enemy.abilityBusy = false; }, 650);
+  if (threshold === 25) {
+    enemy.bossPhase = 4;
+    enemy.baseSpeed *= 1.2;
+    enemy.speed = enemy.baseSpeed;
+    enemy.damage = Math.round(enemy.damage * 1.18);
+    enemy.element.classList.add("boss-final-phase");
+
+    showAnnouncement(
+      "🚨 FINAL BOSS PHASE 🚨",
+      "MAXIMUM AGGRESSION • MULTI-JAM • BACKUP",
+      4000
+    );
+
+    bossJamKeys(4, 5200);
+    bossSummonMinions(3);
+    bossProjectileStorm(enemy, 5);
+  }
+
+  combatText(
+    enemy.x + 30,
+    enemy.y,
+    `PHASE ${enemy.bossPhase}!`,
+    "boss-phase-text"
+  );
+
+  tone(120, 0.35, "sawtooth", 0.03, 55);
 }
 
 function checkBossPhase(enemy) {
-  if (!enemy.boss || enemy.phase2 || enemy.hp > enemy.maxHp * 0.5) return;
-  enemy.phase2 = true;
-  enemy.baseSpeed *= 1.35;
-  enemy.speed = enemy.baseSpeed;
-  enemy.damage = Math.round(enemy.damage * 1.25);
-  enemy.element.classList.add("boss-phase-two");
-  showAnnouncement("⚠ BOSS GOT STRONGER ⚠", "IT IS NOW FASTER AND HITS HARDER.", 3600);
-  combatText(enemy.x + 30, enemy.y, "PHASE 2!", "boss-phase-text");
-  tone(120, 0.35, "sawtooth", 0.03, 55);
+  if (!enemy.boss) return;
+
+  const hpPercent = enemy.hp / enemy.maxHp;
+
+  if (hpPercent <= 0.75) enterBossPhase(enemy, 75);
+  if (hpPercent <= 0.50) enterBossPhase(enemy, 50);
+  if (hpPercent <= 0.25) enterBossPhase(enemy, 25);
+}
+
+function bossAbility(enemy, left, right) {
+  if (!enemy.boss || enemy.abilityBusy || performance.now() < enemy.nextAbility) return;
+
+  enemy.abilityBusy = true;
+
+  const phase = enemy.bossPhase || 1;
+  const delay = Math.max(1300, 4300 - enemy.bossNumber * 180 - phase * 300);
+
+  enemy.nextAbility = performance.now() + delay;
+
+  let moves = ["charge", "shot", "teleport"];
+
+  if (phase >= 2) moves.push("jam", "minions");
+  if (phase >= 3) moves.push("storm", "heal");
+  if (phase >= 4) moves.push("storm", "jam", "minions");
+
+  const move = randomItem(moves);
+
+  if (move === "charge") {
+    showAnnouncement("⚠ BOSS MOVE: CHARGE ⚠", "THE BOSS IS RUSHING!", 2200);
+    enemy.speed = enemy.baseSpeed * (2 + phase * 0.18);
+
+    setTimeout(() => {
+      if (enemies.includes(enemy)) enemy.speed = enemy.baseSpeed;
+      enemy.abilityBusy = false;
+    }, 1050);
+
+    return;
+  }
+
+  if (move === "shot") {
+    showAnnouncement("⚠ BOSS PROJECTILE ⚠", "WATCH YOUR KEYS!", 2000);
+    enemyShoot(enemy);
+  }
+
+  if (move === "storm") {
+    showAnnouncement("⚠ PROJECTILE STORM ⚠", "MULTIPLE KEYS TARGETED!", 2200);
+    bossProjectileStorm(enemy, 3 + Math.min(3, phase));
+  }
+
+  if (move === "jam") {
+    showAnnouncement("⚠ KEY JAM ATTACK ⚠", "MULTIPLE KEYS DISABLED!", 2200);
+    bossJamKeys(Math.min(5, phase), 4200 + phase * 350);
+  }
+
+  if (move === "minions") {
+    showAnnouncement("⚠ BOSS SUMMON ⚠", "MINIONS INCOMING!", 2200);
+    bossSummonMinions(Math.min(4, phase));
+  }
+
+  if (move === "heal") {
+    showAnnouncement("⚠ BOSS REPAIR ⚠", "THE BOSS RESTORED HEALTH!", 2200);
+    enemy.hp = Math.min(enemy.maxHp, enemy.hp + enemy.maxHp * 0.045);
+    updateEnemyUI(enemy);
+    updateBossBar(enemy);
+  }
+
+  if (move === "teleport") {
+    showAnnouncement("⚠ BOSS TELEPORT ⚠", "TARGET RELOCATED!", 2000);
+    enemy.x = randomNumber(left, Math.max(left, right));
+    combatText(enemy.x, enemy.y, "TELEPORT!", "special-text");
+  }
+
+  setTimeout(() => {
+    enemy.abilityBusy = false;
+  }, 650);
 }
 
 
 // ========================================================
 // MOB MOVEMENT
+
 // ========================================================
 
 function moveEnemies() {
@@ -7567,6 +7898,8 @@ function hitEnemy(
       enemy
     );
 
+    checkBossPhase(enemy);
+
   }
 
 
@@ -7875,6 +8208,18 @@ function killEnemy(
 
   killParticles(enemy);
   flashyPulse(enemy.boss ? "boss" : "kill");
+
+  const activeKillEffect = killEffects[equippedKillEffect] || killEffects.burst;
+  const killFx = document.createElement("div");
+  killFx.className = `custom-kill-effect ${activeKillEffect.className}`;
+  killFx.textContent = activeKillEffect.icon;
+  killFx.style.left = `${enemy.x + 45}px`;
+  killFx.style.top = `${enemy.y + 45}px`;
+  arena.appendChild(killFx);
+
+  setTimeout(() => {
+    killFx.remove();
+  }, 850);
 
 
   playKillSound();
@@ -10298,6 +10643,77 @@ function save(syncOnline = true) {
 
 
 // ========================================================
+
+// ========================================================
+// SETTINGS
+// ========================================================
+
+function saveGameSettings() {
+  localStorage.setItem("kiSettingSound5", gameSettings.sound ? "on" : "off");
+  localStorage.setItem("kiSettingVolume5", String(gameSettings.volume));
+  localStorage.setItem("kiSettingShake5", gameSettings.shake ? "on" : "off");
+  localStorage.setItem("kiSettingFlashes5", gameSettings.flashes ? "full" : "soft");
+  localStorage.setItem("kiSettingRareFx5", gameSettings.rareFx ? "on" : "off");
+
+  document.body.classList.toggle("no-screen-shake", !gameSettings.shake);
+  document.body.classList.toggle("soft-flash-effects", !gameSettings.flashes);
+}
+
+function refreshSettingsUI() {
+  const sound = document.getElementById("setting-sound");
+  const volume = document.getElementById("setting-volume");
+  const volumeText = document.getElementById("setting-volume-value");
+  const shake = document.getElementById("setting-shake");
+  const flashes = document.getElementById("setting-flashes");
+  const rareFx = document.getElementById("setting-rare-fx");
+
+  if (sound) sound.textContent = gameSettings.sound ? "ON" : "OFF";
+  if (volume) volume.value = String(Math.round(gameSettings.volume * 100));
+  if (volumeText) volumeText.textContent = `${Math.round(gameSettings.volume * 100)}%`;
+  if (shake) shake.textContent = gameSettings.shake ? "ON" : "OFF";
+  if (flashes) flashes.textContent = gameSettings.flashes ? "FULL" : "SOFT";
+  if (rareFx) rareFx.textContent = gameSettings.rareFx ? "ON" : "OFF";
+
+  saveGameSettings();
+}
+
+document.getElementById("open-settings")?.addEventListener("click", () => {
+  refreshSettingsUI();
+  document.getElementById("settings-overlay")?.classList.add("show");
+});
+
+document.getElementById("close-settings")?.addEventListener("click", () => {
+  document.getElementById("settings-overlay")?.classList.remove("show");
+});
+
+document.getElementById("setting-sound")?.addEventListener("click", () => {
+  gameSettings.sound = !gameSettings.sound;
+  refreshSettingsUI();
+});
+
+document.getElementById("setting-shake")?.addEventListener("click", () => {
+  gameSettings.shake = !gameSettings.shake;
+  refreshSettingsUI();
+});
+
+document.getElementById("setting-flashes")?.addEventListener("click", () => {
+  gameSettings.flashes = !gameSettings.flashes;
+  refreshSettingsUI();
+});
+
+document.getElementById("setting-rare-fx")?.addEventListener("click", () => {
+  gameSettings.rareFx = !gameSettings.rareFx;
+  refreshSettingsUI();
+});
+
+document.getElementById("setting-volume")?.addEventListener("input", (event) => {
+  gameSettings.volume = Number(event.target.value) / 100;
+  refreshSettingsUI();
+});
+
+refreshSettingsUI();
+
+
 // SMALL UI FX
 // ========================================================
 
