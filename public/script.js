@@ -138,7 +138,12 @@ const guns = {
   arc: { name: "Arc Storm", icon: "⚙️", price: 26000, description: "4.30X DAMAGE • LONG RANGE", damage: 4.3, heat: 1.65, bulletClass: "arc", speed: -21, sound: "void" },
   hyper: { name: "Hyper Beam", icon: "💠", price: 38000, description: "5.25X DAMAGE • LOW HEAT", damage: 5.25, heat: 1.35, bulletClass: "red-laser", speed: -24, sound: "laser" },
   titanBreaker: { name: "Titan Breaker", icon: "🔨", price: 60000, description: "7.00X DAMAGE • MADE FOR BOSSES", damage: 7, heat: 2.0, bulletClass: "rail", speed: -23, sound: "rail" },
-  omega: { name: "Omega Cannon", icon: "🌠", price: 95000, description: "9.00X DAMAGE • END GAME WEAPON", damage: 9, heat: 2.25, bulletClass: "nova", speed: -25, sound: "void" }
+  omega: { name: "Omega Cannon", icon: "🌠", price: 95000, description: "9.00X DAMAGE • END GAME WEAPON", damage: 9, heat: 2.25, bulletClass: "nova", speed: -25, sound: "void" },
+  ion: { name: "Ion Repeater", icon: "🌀", price: 135000, description: "10.5X DAMAGE • ULTRA FAST • LOW HEAT", damage: 10.5, heat: 1.45, bulletClass: "arc", speed: -28, sound: "laser" },
+  solar: { name: "Solar Lance", icon: "☀️", price: 190000, description: "13X DAMAGE • BRIGHT HEAVY BEAM", damage: 13, heat: 2.05, bulletClass: "fire", speed: -27, sound: "rail" },
+  glitch: { name: "Glitch Cannon", icon: "👾", price: 275000, description: "16X DAMAGE • CHAOTIC VOID SHOTS", damage: 16, heat: 1.9, bulletClass: "void", speed: -29, sound: "void" },
+  quantum: { name: "Quantum Splitter", icon: "🔮", price: 390000, description: "20X DAMAGE • LIGHTNING FAST", damage: 20, heat: 2.15, bulletClass: "nova", speed: -31, sound: "rail" },
+  singularity: { name: "Singularity", icon: "🕳️", price: 550000, description: "27X DAMAGE • FINAL-TIER CANNON", damage: 27, heat: 2.5, bulletClass: "void", speed: -32, sound: "void" }
 };
 
 const drones = {
@@ -151,7 +156,12 @@ const drones = {
   harvester: { name: "Harvester Drone", icon: "🌾", price: 28000, description: "+90% COINS FROM KILLS." },
   guardian: { name: "Guardian Drone", icon: "🛡️", price: 42000, description: "HEALS 18 HEALTH EVERY TICK." },
   hunter: { name: "Hunter Drone", icon: "🎯", price: 62000, description: "HITS FOR 90 DAMAGE." },
-  royal: { name: "Royal Drone", icon: "👑", price: 90000, description: "+150% COINS FROM KILLS." }
+  royal: { name: "Royal Drone", icon: "👑", price: 90000, description: "+150% COINS FROM KILLS." },
+  pulse: { name: "Pulse Drone", icon: "💫", price: 125000, description: "BLASTS 3 ENEMIES FOR 120 DAMAGE." },
+  medic: { name: "Nano Medic", icon: "🧬", price: 170000, description: "HEALS 34 HEALTH EVERY TICK." },
+  storm: { name: "Storm Drone", icon: "🌩️", price: 240000, description: "ZAPS UP TO 7 ENEMIES FOR 95 DAMAGE." },
+  bounty: { name: "Bounty Drone", icon: "💰", price: 330000, description: "+225% COINS FROM KILLS." },
+  reaper: { name: "Reaper Drone", icon: "💀", price: 470000, description: "HUNTS THE STRONGEST ENEMY FOR 260 DAMAGE." }
 };
 
 const keyboards = {
@@ -164,7 +174,12 @@ const keyboards = {
   eclipse: { name: "Eclipse Board", icon: "🌑", price: 24000, description: "+340 SHIELD • +2.70 COOLING", shield: 340, cooling: 2.7, className: "eclipse-board" },
   plasma: { name: "Plasma Board", icon: "💜", price: 36000, description: "+480 SHIELD • +3.50 COOLING", shield: 480, cooling: 3.5, className: "void-board" },
   reactor: { name: "Reactor Board", icon: "☢️", price: 55000, description: "+650 SHIELD • +4.50 COOLING", shield: 650, cooling: 4.5, className: "sentinel-board" },
-  cosmic: { name: "Cosmic Board", icon: "🌠", price: 85000, description: "+900 SHIELD • +6.00 COOLING", shield: 900, cooling: 6, className: "eclipse-board" }
+  cosmic: { name: "Cosmic Board", icon: "🌠", price: 85000, description: "+900 SHIELD • +6.00 COOLING", shield: 900, cooling: 6, className: "eclipse-board" },
+  prism: { name: "Prism Board", icon: "🔷", price: 125000, description: "+1,250 SHIELD • +8.00 COOLING", shield: 1250, cooling: 8, className: "neon-board" },
+  magma: { name: "Magma Board", icon: "🌋", price: 180000, description: "+1,700 SHIELD • +10.50 COOLING", shield: 1700, cooling: 10.5, className: "military-board" },
+  quantum: { name: "Quantum Board", icon: "⚛️", price: 260000, description: "+2,300 SHIELD • +13.50 COOLING", shield: 2300, cooling: 13.5, className: "void-board" },
+  royal: { name: "Royal Board", icon: "👑", price: 375000, description: "+3,100 SHIELD • +17.00 COOLING", shield: 3100, cooling: 17, className: "sentinel-board" },
+  singularity: { name: "Singularity Board", icon: "🕳️", price: 525000, description: "+4,250 SHIELD • +22.00 COOLING", shield: 4250, cooling: 22, className: "eclipse-board" }
 };
 
 const keycaps = {
@@ -270,7 +285,12 @@ const keycaps = {
   obsidian: {
     name: "Obsidian",
     className: "keycap-obsidian"
-  }
+  },
+  plasma: { name: "Plasma", className: "keycap-plasma" },
+  toxic: { name: "Toxic", className: "keycap-toxic" },
+  ember: { name: "Ember", className: "keycap-ember" },
+  ice: { name: "Ice", className: "keycap-ice" },
+  royal: { name: "Royal", className: "keycap-royal" }
 
 };
 
@@ -3172,8 +3192,8 @@ function renderKeycaps() {
         data.name;
 
 
-      const previewClass =
-        data.className;
+      const previewClass = data.className;
+      if (previewClass) button.classList.add(previewClass);
 
 
       if (
@@ -3419,7 +3439,7 @@ function equipItem(
 
 
   playSuccessSound();
-
+  flashyPulse("upgrade");
 
   saveImportantChange();
 
@@ -3474,18 +3494,17 @@ function getUpgradeCost(
       ? upgrades[type]
       : 0;
 
-  return Math.floor(
+  // Infinite upgrade curve: rises steadily without exploding into unusable prices.
+  const base = upgradeCosts[type] || 1;
+  const effectiveLevel = Math.max(0, level - 1);
 
-    (upgradeCosts[type] || 0)
-
-    *
-
-    Math.pow(
-      1.65,
-      level -
-      1
+  return Math.max(
+    1,
+    Math.floor(
+      base *
+      Math.pow(1.28, Math.min(effectiveLevel, 20)) *
+      Math.pow(1.16, Math.max(0, effectiveLevel - 20))
     )
-
   );
 
 }
@@ -3510,35 +3529,8 @@ document
 
 
           if (
-            type ===
-            "bullets" &&
-            upgrades.bullets >=
-            6
-          ) {
-
-            playErrorSound();
-
-            return;
-
-          }
-
-          if (
-            (type ===
-              "precision" &&
-              upgrades.precision >=
-              8) ||
-            (type ===
-              "crit" &&
-              upgrades.crit >=
-              8) ||
-            (type ===
-              "magnet" &&
-              upgrades.magnet >=
-              8) ||
-            (type ===
-              "bulletSpeed" &&
-              upgrades.bulletSpeed >=
-              8)
+            type === "bullets" &&
+            upgrades.bullets >= 10
           ) {
 
             playErrorSound();
@@ -3572,14 +3564,18 @@ document
             cost;
 
 
-          upgrades[
-            type
-          ]++;
-
+          upgrades[type]++;
 
           playSuccessSound();
+          flashyPulse("upgrade");
+          showGameNotification(
+            "⚡ UPGRADE POWERED UP!",
+            `${type.replace(/([A-Z])/g, " $1").toUpperCase()} → LV ${upgrades[type]}`,
+            "quest"
+          );
 
           saveImportantChange();
+          updateLobby();
 
         }
 
@@ -3624,19 +3620,11 @@ const neonKeycapPool = [
 
 
 const cosmicKeycapPool = [
-  "pink",
-  "purple",
-  "rainbow",
-  "galaxy",
-  "cyan"
+  "pink", "purple", "rainbow", "galaxy", "cyan", "plasma", "toxic", "ice"
 ];
 
 const legendKeycapPool = [
-  "rainbow",
-  "galaxy",
-  "cyan",
-  "gold",
-  "obsidian"
+  "rainbow", "galaxy", "cyan", "gold", "obsidian", "plasma", "toxic", "ember", "ice", "royal"
 ];
 
 
@@ -4478,8 +4466,8 @@ function startGame() {
   maxHealth =
     100
     +
-    upgrades.health *
-    18
+    upgrades.health * 24 +
+    Math.pow(Math.max(0, upgrades.health - 12), 1.15) * 6
     +
     board.shield
     +
@@ -5845,11 +5833,7 @@ function fireGun(
     12;
 
 
-  let amount =
-    Math.min(
-      upgrades.bullets,
-      6
-    );
+  let amount = Math.min(upgrades.bullets, 10);
 
 
   let spread =
@@ -5961,15 +5945,15 @@ function createBullet(
       gun.speed *
       (
         1 +
-        bulletSpeedLevel *
-        0.12
+        Math.min(bulletSpeedLevel, 15) * 0.14 +
+        Math.sqrt(Math.max(0, bulletSpeedLevel - 15)) * 0.12
       ),
 
     damage:
       (
         8 +
-        upgrades.damage *
-        5
+        upgrades.damage * 6 +
+        Math.pow(Math.max(0, upgrades.damage - 10), 1.18) * 1.6
       )
       *
       gun.damage
@@ -6013,13 +5997,14 @@ setInterval(
       ];
 
 
-    heat -=
-      1.25
-      +
-      upgrades.cooling *
-      0.55
-      +
+    const coolingLevel = Math.max(0, upgrades.cooling);
+    const coolingPower =
+      1.4 +
+      coolingLevel * 0.95 +
+      Math.sqrt(coolingLevel) * 0.65 +
       board.cooling;
+
+    heat -= coolingPower;
 
 
     heat =
@@ -6033,9 +6018,9 @@ setInterval(
       Math.min(
         100,
         precision +
-        0.6 +
-        upgrades.precision *
-        0.3
+        0.75 +
+        Math.min(upgrades.precision, 15) * 0.55 +
+        Math.sqrt(Math.max(0, upgrades.precision - 15)) * 0.35
       );
 
 
@@ -6100,7 +6085,10 @@ function triggerOverheat() {
 
     },
 
-    1450
+    Math.max(
+      280,
+      1450 - upgrades.cooling * 38 - Math.sqrt(upgrades.cooling) * 55
+    )
 
   );
 
@@ -7117,14 +7105,9 @@ function hitEnemy(
   const critical =
     Math.random() <
     (
-      0.06
-      +
-      precision /
-      100 *
-      0.08
-      +
-      upgrades.crit *
-      0.012
+      0.06 +
+      precision / 100 * 0.08 +
+      0.42 * (1 - Math.exp(-Math.max(0, upgrades.crit) / 18))
     );
 
 
@@ -7132,8 +7115,8 @@ function hitEnemy(
     critical
   ) {
 
-    damage *=
-      2;
+    damage *= 2 + Math.min(1.5, upgrades.crit * 0.035);
+    flashyPulse("crit");
 
   }
 
@@ -7491,12 +7474,13 @@ function killEnemy(
   if (equipped.drone === "coin") reward *= 1.5;
   if (equipped.drone === "harvester") reward *= 1.9;
   if (equipped.drone === "royal") reward *= 2.5;
+  if (equipped.drone === "bounty") reward *= 3.25;
 
 
   reward *=
     1 +
-    upgrades.magnet *
-    0.06;
+    Math.min(upgrades.magnet, 20) * 0.075 +
+    Math.sqrt(Math.max(0, upgrades.magnet - 20)) * 0.08;
 
 
   reward *=
@@ -7530,9 +7514,8 @@ function killEnemy(
 
   // MUCH BIGGER PARTICLE EFFECT
 
-  killParticles(
-    enemy
-  );
+  killParticles(enemy);
+  flashyPulse(enemy.boss ? "boss" : "kill");
 
 
   playKillSound();
@@ -8198,7 +8181,7 @@ function startDrone() {
           equipped.drone;
 
 
-        if (drone === "repair" || drone === "guardian") {
+        if (drone === "repair" || drone === "guardian" || drone === "medic") {
 
           if (
             health <
@@ -8209,7 +8192,7 @@ function startDrone() {
               Math.min(
                 maxHealth,
                 health +
-                (drone === "guardian" ? 18 : 8)
+                (drone === "medic" ? 34 : drone === "guardian" ? 18 : 8)
               );
 
 
@@ -8368,6 +8351,18 @@ function startDrone() {
 
         }
 
+
+        else if (drone === "reaper") {
+          const strongest = enemies.reduce((best, mob) => !best || mob.hp > best.hp ? mob : best, null);
+          if (!strongest) return;
+          droneAttackVisual(strongest, "#ff4f7d");
+          strongest.hp -= 260;
+          playDroneSound("gun");
+          updateEnemyUI(strongest);
+          if (strongest.hp <= 0) killEnemy(strongest);
+          flashyPulse("crit");
+          return;
+        }
 
         else if (drone === "prism") {
           droneAttackVisual(target, "#8be9ff");
@@ -9408,11 +9403,7 @@ function updateLobby() {
       document.getElementById(
         `${type}-cost`
       ).textContent =
-        type ===
-        "bullets"
-        &&
-        upgrades.bullets >=
-        6
+        type === "bullets" && upgrades.bullets >= 10
           ?
           "MAX"
           :
@@ -9435,6 +9426,22 @@ function updateLobby() {
 // ========================================================
 // ANNOUNCEMENT
 // ========================================================
+
+let flashyPulseTimer = null;
+
+function flashyPulse(type = "hit") {
+  const root = document.body;
+  if (!root) return;
+
+  root.classList.remove("fx-hit", "fx-crit", "fx-kill", "fx-upgrade", "fx-drone", "fx-boss");
+  void root.offsetWidth;
+  root.classList.add(`fx-${type}`);
+
+  clearTimeout(flashyPulseTimer);
+  flashyPulseTimer = setTimeout(() => {
+    root.classList.remove("fx-hit", "fx-crit", "fx-kill", "fx-upgrade", "fx-drone", "fx-boss");
+  }, type === "boss" ? 520 : 260);
+}
 
 let announcementTimer = null;
 
