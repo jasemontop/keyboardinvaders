@@ -1945,8 +1945,13 @@ async function pollLiveEvents() {
         playSuccessSound();
       }
       else if (event.type === "global") {
-        showGameNotification(event.title || "📡 GLOBAL MESSAGE", event.message || "", "global");
+        showGameNotification(event.title || "📡 JASEM", event.message || "", "global");
         tone(520, 0.08, "sine", 0.02, 760);
+      }
+      else if (event.type === "reset") {
+        await refreshAccountFromServer();
+        applyFreshResetLocally();
+        showGameNotification(event.title || "♻ PROGRESS RESET", event.message || "Your progress was reset.", "info");
       }
       else {
         showGameNotification(event.title || "UPDATE", event.message || "", "info");
@@ -2204,6 +2209,24 @@ document.getElementById("admin-give-coins")?.addEventListener("click", () => run
 document.getElementById("admin-remove-coins")?.addEventListener("click", () => runCoinAdminAction("remove"));
 document.getElementById("admin-set-coins")?.addEventListener("click", () => runCoinAdminAction("set"));
 
+async function runAdminResetProgress() {
+  const target = String(adminTarget?.value || "").trim();
+  if (!target) { setAdminMessage("Enter a player username first."); return; }
+  const confirmed = confirm(`RESET ${target}'s progress?\n\nThis wipes coins, upgrades, items, waves, kills and rebirths. Their username/account stays.`);
+  if (!confirmed) return;
+  const typed = prompt(`Type RESET to confirm resetting ${target}:`);
+  if (String(typed || "").trim().toUpperCase() !== "RESET") { setAdminMessage("Reset cancelled."); return; }
+  try {
+    const data = await adminRequest("/api/admin/reset-progress", { method: "POST", body: JSON.stringify({ target }) });
+    setAdminMessage(`✓ ${data.player.username}'s progress was reset.`, true);
+    showGameNotification("♻ PLAYER RESET", `${data.player.username}'s progress was reset.`, "info");
+    if (data.player.username.toLowerCase() === String(username || "").toLowerCase()) { applyOnlinePlayer(data.player); applyFreshResetLocally(); }
+    await loadAdminUsers();
+  } catch (error) { setAdminMessage(error.message); playErrorSound(); }
+}
+
+document.getElementById("admin-reset-progress")?.addEventListener("click", runAdminResetProgress);
+
 document.querySelectorAll("[data-self-coins]").forEach(button => {
   button.addEventListener("click", () => {
     runCoinAdminAction("add", username, Number(button.dataset.selfCoins || 0));
@@ -2258,7 +2281,7 @@ if (adminGlobalSend) {
       if (adminGlobalInput) adminGlobalInput.value = "";
       if (adminGlobalCount) adminGlobalCount.textContent = "0 / 220";
       if (adminGlobalStatus) adminGlobalStatus.textContent = "✓ GLOBAL MESSAGE SENT";
-      showGameNotification("📡 BROADCAST SENT", message, "global");
+      showGameNotification("📡 JASEM", message, "global");
       playSuccessSound();
     }
     catch (error) {
@@ -2392,6 +2415,57 @@ document.addEventListener("keydown", event => {
 });
 
 // ========================================================
+// SETTINGS
+// ========================================================
+
+const settingsOverlay = document.getElementById("settings-overlay");
+const settingSound = document.getElementById("setting-sound");
+const settingVolume = document.getElementById("setting-volume");
+const settingVolumeValue = document.getElementById("setting-volume-value");
+const settingShake = document.getElementById("setting-shake");
+const settingFlashes = document.getElementById("setting-flashes");
+const settingsStatus = document.getElementById("settings-status");
+
+function renderSettingsUI() {
+  if (settingSound) { settingSound.textContent = gameSettings.sound ? "ON" : "OFF"; settingSound.classList.toggle("off", !gameSettings.sound); }
+  if (settingVolume) settingVolume.value = String(Math.round(gameSettings.volume * 100));
+  if (settingVolumeValue) settingVolumeValue.textContent = `${Math.round(gameSettings.volume * 100)}%`;
+  if (settingShake) { settingShake.textContent = gameSettings.shake ? "ON" : "OFF"; settingShake.classList.toggle("off", !gameSettings.shake); }
+  if (settingFlashes) { settingFlashes.textContent = gameSettings.flashes ? "FULL" : "SOFT"; settingFlashes.classList.toggle("off", !gameSettings.flashes); }
+}
+function openSettings() { renderSettingsUI(); if (settingsStatus) settingsStatus.textContent = ""; settingsOverlay?.classList.add("show"); settingsOverlay?.setAttribute("aria-hidden","false"); }
+function closeSettings() { settingsOverlay?.classList.remove("show"); settingsOverlay?.setAttribute("aria-hidden","true"); }
+function applyFreshResetLocally() {
+  coins=0; bestWave=0; totalKills=0; rebirths=0; upgrades={...defaultUpgrades};
+  owned={guns:["pulse"],drones:[],keyboards:["standard"]};
+  equipped={gun:"pulse",drone:null,keyboard:"standard",keycap:"standard",character:equipped?.character || selectedCharacter || "astronaut"};
+  ownedKeycaps=["standard"]; serverCoinBaseline=0; questTier=1; resetQuests(1); save(false); renderShops(); updateLobby(); updateUsernameUI();
+}
+async function resetMyProgress() {
+  if (!confirm("RESET YOUR PROGRESS?\n\nThis erases coins, upgrades, items, waves, kills and rebirths. Your username stays.")) return;
+  if (String(prompt("Type RESET to confirm:") || "").trim().toUpperCase() !== "RESET") { if(settingsStatus) settingsStatus.textContent="Reset cancelled."; return; }
+  try {
+    if (accountToken && !guestMode) {
+      const response=await apiFetch("/api/reset-progress",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${accountToken}`}});
+      const data=await response.json().catch(()=>({})); if(!response.ok) throw new Error(data.error || "Could not reset progress."); serverSaveVersion=Number(data.player?.saveVersion || serverSaveVersion);
+    }
+    applyFreshResetLocally(); if(settingsStatus) settingsStatus.textContent="✓ Progress reset."; showGameNotification("♻ FRESH START","Your progress was reset. Your username is safe.","info"); playSuccessSound();
+  } catch(error) { if(settingsStatus) settingsStatus.textContent=error.message; playErrorSound(); }
+}
+
+document.getElementById("open-settings")?.addEventListener("click",openSettings);
+document.getElementById("close-settings")?.addEventListener("click",closeSettings);
+settingsOverlay?.addEventListener("click",e=>{if(e.target===settingsOverlay) closeSettings();});
+settingSound?.addEventListener("click",()=>{gameSettings.sound=!gameSettings.sound;persistGameSettings();renderSettingsUI();if(gameSettings.sound)tone(650,.05,"sine",.02,820);});
+settingVolume?.addEventListener("input",()=>{gameSettings.volume=Number(settingVolume.value)/100;persistGameSettings();renderSettingsUI();});
+settingShake?.addEventListener("click",()=>{gameSettings.shake=!gameSettings.shake;persistGameSettings();renderSettingsUI();});
+settingFlashes?.addEventListener("click",()=>{gameSettings.flashes=!gameSettings.flashes;persistGameSettings();renderSettingsUI();flashyPulse("upgrade");});
+document.getElementById("settings-reset-progress")?.addEventListener("click",resetMyProgress);
+document.getElementById("settings-close-panels")?.addEventListener("click",()=>{closeLeaderboard();closeAdminPanel();closeStatsPanel();});
+document.getElementById("settings-replay-tutorial")?.addEventListener("click",()=>{closeSettings();showTutorial("lobby",true);});
+applyGameSettings();
+
+// ========================================================
 // TUTORIAL
 // ========================================================
 
@@ -2408,24 +2482,27 @@ let tutorialStep = 0;
 let tutorialPart = "lobby";
 
 const lobbyTutorialSteps = [
-  { target: "#start-run", title: "PLAY", text: "Press PLAY to start fighting enemies." },
-  { target: ".upgrade-strip", title: "GET STRONGER", text: "Spend coins on upgrades. Cooling makes heat go up slower. Extra Shots lets you fire more bullets." },
-  { target: "[data-open-stats]", title: "YOUR BUFFS", text: "Press STATS any time to see exactly what every upgrade is doing for you." },
-  { target: '[data-menu="guns"]', title: "GUNS", text: "Buy guns, then equip the one you want." },
-  { target: '[data-menu="drones"]', title: "DRONES", text: "Drones fight with you and give extra bonuses." },
-  { target: '[data-menu="keyboards"]', title: "KEYBOARDS", text: "Keyboards give you extra health and help with heat." },
-  { target: ".career-card", title: "LEVEL UP", text: "Kills and higher waves raise your level. Some levels unlock a new nametag." },
-  { target: '[data-menu="quests"]', title: "QUESTS", text: "Finish goals for bonus coins." },
-  { target: '[data-menu="rebirth"]', title: "REBIRTH", text: "Much later, rebirth resets some progress but gives permanent power." }
+  { target: "#start-run", title: "👋 WELCOME", text: "Type keys to shoot enemies, survive waves, earn money, and build a stronger setup." },
+  { target: ".upgrade-strip", title: "⬆ GET STRONGER", text: "Damage hits harder. Cooling makes heat build slower. Health keeps you alive. Extra Shots fires more bullets." },
+  { target: "[data-open-stats]", title: "📊 SEE YOUR BUFFS", text: "Open STATS whenever you want to see exactly what your upgrades and gear are doing." },
+  { target: '[data-menu="guns"]', title: "🔫 GUNS", text: "Buy stronger guns, then press EQUIP. Guns change damage, heat, speed, and effects." },
+  { target: '[data-menu="drones"]', title: "🤖 DRONES", text: "Drones fight beside you and give extra bonuses." },
+  { target: '[data-menu="keyboards"]', title: "⌨ YOUR SETUP", text: "Keyboards give useful bonuses. Keycaps change how your keys look." },
+  { target: ".career-card", title: "⭐ LEVELS + NAMETAGS", text: "Good runs raise your level. You see every level-up, but a nametag only pops up when you unlock a new one." },
+  { target: '[data-menu="quests"]', title: "📋 QUESTS", text: "Finish simple goals and claim extra money." },
+  { target: "#open-settings", title: "⚙ SETTINGS", text: "Change sound, volume, shake, flashes, replay this tutorial, or reset your own progress here." },
+  { target: '[data-menu="rebirth"]', title: "♻ REBIRTH", text: "Use this much later. It resets some progress but gives permanent power." }
 ];
 
 const gameTutorialSteps = [
-  { target: ".game-hud", title: "YOUR RUN", text: "Up here you can see your wave, kills, money, level, and name." },
-  { target: ".game-left", title: "HEALTH + HEAT", text: "Health keeps you alive. Shooting adds heat. If heat reaches 100%, your gun overheats." },
-  { target: ".overdrive-card", title: "POWER MODE", text: "Get kills to fill this bar. At 100%, POWER MODE turns on and makes you much stronger for a few seconds." },
-  { target: "#arena", title: "POWER-UPS", text: "Helpful drops sometimes appear here. Click them before they disappear. Their text tells you exactly what they do." },
-  { target: "#keyboard-zone", title: "TYPE TO SHOOT", text: "Press the matching keyboard keys to shoot enemies before they reach your keyboard." },
-  { target: ".run-controls", title: "RUN CONTROLS", text: "STATS shows your buffs. DIE ends the run. LEAVE saves and sends you straight back to the lobby." }
+  { target: "#keyboard-zone", title: "⌨ TYPE TO SHOOT", text: "Every key you press fires from that key. Stop enemies before they reach your keyboard." },
+  { target: ".game-left", title: "❤️ HEALTH + 🔥 HEAT", text: "Health keeps you alive. Shooting adds heat. At 100% heat, your gun stops for a moment." },
+  { target: ".overdrive-card", title: "⚡ POWER MODE", text: "Kills fill this bar. At 100%, you automatically get more damage, less heat, faster shots, and extra money." },
+  { target: "#arena", title: "🎁 POWER-UPS", text: "Helpful drops appear during runs. Click them before they disappear. Their label tells you what they do." },
+  { target: "#keyboard", title: "🚫 JAMMED KEYS", text: "A jammed key turns bright red and cannot shoot until the timer ends." },
+  { target: ".game-right", title: "🌊 SPECIAL WAVES", text: "Some waves change the rules. The whole background changes so you can tell an event is active." },
+  { target: ".run-controls", title: "🧰 RUN BUTTONS", text: "STATS shows your buffs. DIE ends the run. LEAVE saves and returns to the lobby." },
+  { target: "#boss-bar", title: "👑 BOSSES", text: "Every 10 waves brings a boss. They get much stronger later, so keep upgrading." }
 ];
 
 function positionTutorial(step) {
@@ -2457,14 +2534,16 @@ function renderTutorialStep() {
   tutorialTitle.textContent = step.title;
   tutorialText.textContent = step.text;
   tutorialCount.textContent = `${tutorialPart === "lobby" ? "LOBBY" : "RUN"} ${tutorialStep + 1} / ${steps.length}`;
+  const dots=document.getElementById("tutorial-dots");
+  if(dots) dots.innerHTML=steps.map((_,i)=>`<span class="${i===tutorialStep?"active":i<tutorialStep?"done":""}"></span>`).join("");
   tutorialNext.textContent = tutorialStep === steps.length - 1
     ? (tutorialPart === "lobby" ? "GOT IT →" : "FINISH")
     : "NEXT →";
   positionTutorial(step);
 }
 
-function showTutorial(part = "lobby") {
-  if (tutorialSeen) return;
+function showTutorial(part = "lobby", force = false) {
+  if (tutorialSeen && !force) return;
   tutorialPart = part;
   tutorialStep = 0;
   tutorialOverlay.classList.add("show");
@@ -2507,6 +2586,26 @@ window.addEventListener("resize", () => {
 let audioContext =
   null;
 
+let gameSettings = {
+  sound: localStorage.getItem("kiSettingSound") !== "off",
+  volume: Math.max(0, Math.min(1, Number(localStorage.getItem("kiSettingVolume") ?? 1))),
+  shake: localStorage.getItem("kiSettingShake") !== "off",
+  flashes: localStorage.getItem("kiSettingFlashes") !== "soft"
+};
+
+function applyGameSettings() {
+  document.body.classList.toggle("no-screen-shake", !gameSettings.shake);
+  document.body.classList.toggle("soft-flashes", !gameSettings.flashes);
+}
+
+function persistGameSettings() {
+  localStorage.setItem("kiSettingSound", gameSettings.sound ? "on" : "off");
+  localStorage.setItem("kiSettingVolume", String(gameSettings.volume));
+  localStorage.setItem("kiSettingShake", gameSettings.shake ? "on" : "off");
+  localStorage.setItem("kiSettingFlashes", gameSettings.flashes ? "full" : "soft");
+  applyGameSettings();
+}
+
 
 function getAudio() {
 
@@ -2537,6 +2636,9 @@ function tone(
 ) {
 
   try {
+
+    if (!gameSettings.sound || gameSettings.volume <= 0) return;
+    volume *= gameSettings.volume;
 
     const ctx =
       getAudio();
