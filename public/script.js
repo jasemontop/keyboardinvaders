@@ -1556,7 +1556,7 @@ guestPlayButton.addEventListener("click", () => {
   updateAccountStatus();
   loadQuests();
   playSuccessSound();
-  showTutorial("lobby");
+  beginFirstJoinTutorial();
 });
 
 async function submitAccount() {
@@ -1652,7 +1652,7 @@ async function submitAccount() {
 
     playSuccessSound();
     startLiveUpdates();
-    showTutorial("lobby");
+    beginFirstJoinTutorial();
   }
   catch (error) {
     accountError.textContent = error.message;
@@ -1680,7 +1680,7 @@ async function checkAccount() {
     updateAccountStatus();
     loadQuests();
     startLiveUpdates();
-    showTutorial("lobby");
+    beginFirstJoinTutorial();
     return;
   }
 
@@ -1709,7 +1709,7 @@ async function checkAccount() {
     updateAccountStatus();
     loadQuests();
     startLiveUpdates();
-    showTutorial("lobby");
+    beginFirstJoinTutorial();
   }
   catch (error) {
     console.warn("Account check failed:", error.message);
@@ -2435,26 +2435,105 @@ const tutorialSkip = document.getElementById("tutorial-skip");
 
 let tutorialStep = 0;
 let tutorialPart = "lobby";
+let practiceTutorialActive = false;
+let practiceTutorialComplete = false;
+let waitingForPracticeLeave = false;
 
-const lobbyTutorialSteps = [
-  { target: "#start-run", title: "PLAY", text: "Press PLAY to start fighting enemies." },
-  { target: ".upgrade-strip", title: "GET STRONGER", text: "Spend coins on upgrades. Cooling makes heat go up slower. Extra Shots lets you fire more bullets." },
-  { target: "[data-open-stats]", title: "YOUR BUFFS", text: "Press STATS any time to see exactly what every upgrade is doing for you." },
-  { target: '[data-menu="guns"]', title: "GUNS", text: "Buy guns, then equip the one you want." },
-  { target: '[data-menu="drones"]', title: "DRONES", text: "Drones fight with you and give extra bonuses." },
-  { target: '[data-menu="keyboards"]', title: "KEYBOARDS", text: "Keyboards give you extra health and help with heat." },
-  { target: ".career-card", title: "LEVEL UP", text: "Kills and higher waves raise your level. Some levels unlock a new nametag." },
-  { target: '[data-menu="quests"]', title: "QUESTS", text: "Finish goals for bonus coins." },
-  { target: '[data-menu="rebirth"]', title: "REBIRTH", text: "Much later, rebirth resets some progress but gives permanent power." }
-];
 
 const gameTutorialSteps = [
-  { target: ".game-hud", title: "YOUR RUN", text: "Up here you can see your wave, kills, money, level, and name." },
-  { target: ".game-left", title: "HEALTH + HEAT", text: "Health keeps you alive. Shooting adds heat. If heat reaches 100%, your gun overheats." },
-  { target: ".overdrive-card", title: "POWER MODE", text: "Get kills to fill this bar. At 100%, POWER MODE turns on and makes you much stronger for a few seconds." },
-  { target: "#arena", title: "POWER-UPS", text: "Helpful drops sometimes appear here. Click them before they disappear. Their text tells you exactly what they do." },
-  { target: "#keyboard-zone", title: "TYPE TO SHOOT", text: "Press the matching keyboard keys to shoot enemies before they reach your keyboard." },
-  { target: ".run-controls", title: "RUN CONTROLS", text: "STATS shows your buffs. DIE ends the run. LEAVE saves and sends you straight back to the lobby." }
+  {
+    target: "#arena",
+    title: "WELCOME TO PRACTICE!",
+    text: "This is a safe practice run. The enemies are frozen while I show you how everything works."
+  },
+  {
+    target: "#keyboard-zone",
+    title: "TYPE TO SHOOT",
+    text: "Press the matching letter on your real keyboard. Your shot fires from that same key on the on-screen keyboard."
+  },
+  {
+    target: ".game-left",
+    title: "HEALTH + HEAT",
+    text: "Your shield keeps you alive. Shooting creates heat. If heat reaches 100%, your gun overheats for a moment."
+  },
+  {
+    target: ".overdrive-card",
+    title: "POWER MODE",
+    text: "Kills charge POWER MODE. When the bar fills, you temporarily deal more damage and handle heat much better."
+  },
+  {
+    target: "#arena",
+    title: "ENEMIES + DROPS",
+    text: "Enemies move toward your keyboard. Some shoot, jam keys, or become rare GOLDEN, GLITCHED, or MYTHIC enemies. Helpful drops can also appear here."
+  },
+  {
+    target: "#boss-bar",
+    title: "BOSSES",
+    text: "Every 10 waves has a boss. Bosses get special phases as their health drops, so their attacks become more dangerous during the fight."
+  },
+  {
+    target: ".run-controls",
+    title: "PRACTICE COMPLETE",
+    text: "That is the fighting part! Press FINISH and the enemies will unfreeze. Your LEAVE button will appear so you can continue the rest of the tutorial."
+  }
+];
+
+const lobbyTutorialSteps = [
+  {
+    target: ".upgrade-strip",
+    title: "UPGRADES",
+    text: "Spend credits here to improve damage, extra shots, cooling, health, accuracy, crit chance, magnet strength, and bullet speed."
+  },
+  {
+    target: "[data-open-stats]",
+    title: "STATS + BUFFS",
+    text: "Open STATS whenever you want to see exactly what your upgrades and equipped gear are doing."
+  },
+  {
+    target: '[data-menu="guns"]',
+    title: "GUNS",
+    text: "Buy stronger guns and equip the one that fits your build."
+  },
+  {
+    target: '[data-menu="drones"]',
+    title: "DRONES",
+    text: "Drones fight beside you or give special bonuses such as healing, damage, or extra credits."
+  },
+  {
+    target: '[data-menu="keyboards"]',
+    title: "KEYBOARDS",
+    text: "Keyboards give different shield and cooling bonuses. You can also customize your keycaps."
+  },
+  {
+    target: '[data-menu="crates"]',
+    title: "CRATES + KILL EFFECTS",
+    text: "Crates can unlock keycaps and kill effects. Equip a kill effect to change the animation enemies make when you defeat them."
+  },
+  {
+    target: ".career-card",
+    title: "LEVELS",
+    text: "Kills and higher waves raise your career level. Higher levels unlock new nametags."
+  },
+  {
+    target: '[data-menu="quests"]',
+    title: "QUESTS",
+    text: "Complete quests while you play to earn bonus credits."
+  },
+  {
+    target: '[data-menu="rebirth"]',
+    title: "REBIRTH",
+    text: "Later on, rebirth lets you restart part of your progression in exchange for permanent power."
+  },
+  {
+    target: "#open-settings",
+    title: "SETTINGS",
+    text: "Use Settings to control sound, volume, screen shake, flash effects, and rare-mob alerts."
+  },
+  {
+    target: "#start-run",
+    title: "HAVE FUN!",
+    text: "You know everything you need. Pick a difficulty, build your loadout, survive as long as you can, and have fun!"
+  }
 ];
 
 function positionTutorial(step) {
@@ -2479,50 +2558,160 @@ function positionTutorial(step) {
   tutorialTip.style.top = `${tipTop}px`;
 }
 
-function renderTutorialStep() {
-  const steps = tutorialPart === "lobby" ? lobbyTutorialSteps : gameTutorialSteps;
-  const step = steps[tutorialStep];
-  if (!step) return finishTutorialPart();
-  tutorialTitle.textContent = step.title;
-  tutorialText.textContent = step.text;
-  tutorialCount.textContent = `${tutorialPart === "lobby" ? "LOBBY" : "RUN"} ${tutorialStep + 1} / ${steps.length}`;
-  tutorialNext.textContent = tutorialStep === steps.length - 1
-    ? (tutorialPart === "lobby" ? "GOT IT →" : "FINISH")
-    : "NEXT →";
-  positionTutorial(step);
+function getTutorialSteps() {
+  return tutorialPart === "lobby"
+    ? lobbyTutorialSteps
+    : gameTutorialSteps;
 }
 
-function showTutorial(part = "lobby") {
-  if (tutorialSeen) return;
+function renderTutorialStep() {
+  const steps = getTutorialSteps();
+  const step = steps[tutorialStep];
+
+  if (!step) {
+    finishTutorialPart();
+    return;
+  }
+
+  tutorialTitle.textContent = step.title;
+  tutorialText.textContent = step.text;
+
+  tutorialCount.textContent =
+    `${tutorialPart === "lobby" ? "LOBBY" : "PRACTICE"} ${tutorialStep + 1} / ${steps.length}`;
+
+  tutorialNext.textContent =
+    tutorialStep === steps.length - 1
+      ? (tutorialPart === "game" ? "FINISH" : "HAVE FUN! 🚀")
+      : "NEXT →";
+
+  // Boss bar is hidden during normal wave 1. For that tutorial step,
+  // highlight the arena instead so the focus box never becomes 0x0.
+  if (
+    step.target === "#boss-bar" &&
+    document.getElementById("boss-bar")?.offsetParent === null
+  ) {
+    positionTutorial({ ...step, target: "#arena" });
+  } else {
+    positionTutorial(step);
+  }
+}
+
+function showTutorial(part = "game", force = false) {
+  if (tutorialSeen && !force) return;
+
   tutorialPart = part;
   tutorialStep = 0;
+
   tutorialOverlay.classList.add("show");
   tutorialOverlay.setAttribute("aria-hidden", "false");
+
   setTimeout(renderTutorialStep, 80);
+}
+
+function revealPracticeLeave() {
+  practiceTutorialComplete = true;
+  waitingForPracticeLeave = true;
+
+  const leaveButton = document.getElementById("run-leave");
+
+  if (leaveButton) {
+    leaveButton.classList.remove("tutorial-hidden");
+    leaveButton.classList.add("tutorial-leave-ready");
+    leaveButton.textContent = "🚪 LEAVE PRACTICE";
+  }
+
+  showAnnouncement(
+    "🎓 PRACTICE COMPLETE!",
+    "ENEMIES ARE LIVE • CLICK LEAVE PRACTICE TO CONTINUE",
+    4200
+  );
 }
 
 function finishTutorialPart() {
   tutorialOverlay.classList.remove("show");
   tutorialOverlay.setAttribute("aria-hidden", "true");
+
   if (tutorialPart === "game") {
-    tutorialSeen = true;
-    save();
+    revealPracticeLeave();
+    return;
   }
+
+  // Only mark the whole tutorial complete after the lobby section.
+  tutorialSeen = true;
+  practiceTutorialActive = false;
+  practiceTutorialComplete = false;
+  waitingForPracticeLeave = false;
+
+  const badge = document.getElementById("practice-mode-badge");
+  badge?.classList.remove("show");
+
+  save();
+  playSuccessSound();
+  showGameNotification?.(
+    "🚀 TUTORIAL COMPLETE",
+    "HAVE FUN, COMMANDER!",
+    "quest"
+  );
 }
 
 tutorialNext.addEventListener("click", () => {
-  const steps = tutorialPart === "lobby" ? lobbyTutorialSteps : gameTutorialSteps;
+  const steps = getTutorialSteps();
+
   tutorialStep++;
-  if (tutorialStep >= steps.length) finishTutorialPart();
-  else renderTutorialStep();
+
+  if (tutorialStep >= steps.length) {
+    finishTutorialPart();
+  } else {
+    renderTutorialStep();
+  }
 });
 
 tutorialSkip.addEventListener("click", () => {
-  tutorialSeen = true;
-  save();
   tutorialOverlay.classList.remove("show");
   tutorialOverlay.setAttribute("aria-hidden", "true");
+
+  if (tutorialPart === "game") {
+    // Skip only the practice explanation. The player still leaves practice
+    // and sees the lobby section before the tutorial is considered finished.
+    revealPracticeLeave();
+    return;
+  }
+
+  tutorialSeen = true;
+  practiceTutorialActive = false;
+  practiceTutorialComplete = false;
+  waitingForPracticeLeave = false;
+
+  document.getElementById("practice-mode-badge")?.classList.remove("show");
+
+  save();
 });
+
+function beginFirstJoinTutorial() {
+  if (tutorialSeen || practiceTutorialActive) return;
+
+  practiceTutorialActive = true;
+  practiceTutorialComplete = false;
+  waitingForPracticeLeave = false;
+
+  selectedDifficulty = "easy";
+
+  startGame();
+
+  const leaveButton = document.getElementById("run-leave");
+
+  if (leaveButton) {
+    leaveButton.classList.add("tutorial-hidden");
+    leaveButton.classList.remove("tutorial-leave-ready");
+    leaveButton.textContent = "🚪 LEAVE";
+  }
+
+  document.getElementById("practice-mode-badge")?.classList.add("show");
+
+  setTimeout(() => {
+    showTutorial("game");
+  }, 260);
+}
 
 window.addEventListener("resize", () => {
   if (tutorialOverlay.classList.contains("show")) renderTutorialStep();
@@ -4900,17 +5089,23 @@ function startGame() {
 
   const difficulty = getDifficulty();
 
-  showAnnouncement(
-    `${difficulty.icon} ${difficulty.name} MODE`,
-    `${difficulty.cash}× CASH • SURVIVE THE INVASION`
-  );
+  if (practiceTutorialActive) {
+    showAnnouncement(
+      "🎓 PRACTICE MODE",
+      "ENEMIES STAY FROZEN UNTIL THE TUTORIAL ENDS",
+      3600
+    );
+  } else {
+    showAnnouncement(
+      `${difficulty.icon} ${difficulty.name} MODE`,
+      `${difficulty.cash}× CASH • SURVIVE THE INVASION`
+    );
+  }
 
 
   updateHUD();
-  addQuestProgress("wave", 1, true);
-
-  if (!tutorialSeen) {
-    setTimeout(() => showTutorial("game"), 180);
+  if (!practiceTutorialActive) {
+    addQuestProgress("wave", 1, true);
   }
 
   setTimeout(
@@ -6645,7 +6840,13 @@ function gameLoop() {
 
     moveBullets();
 
-    moveEnemies();
+    const tutorialIsHoldingEnemies =
+      practiceTutorialActive &&
+      !practiceTutorialComplete;
+
+    if (!tutorialIsHoldingEnemies) {
+      moveEnemies();
+    }
 
     collisions();
 
@@ -10316,24 +10517,53 @@ document.getElementById("run-die")?.addEventListener("click", () => {
 
 document.getElementById("run-leave")?.addEventListener("click", () => {
   if (!running) return;
-  if (!confirm("Leave this run and go back to the lobby? Your progress will still save.")) return;
+
+  const leavingPractice =
+    practiceTutorialActive &&
+    waitingForPracticeLeave;
+
+  if (!leavingPractice) {
+    if (!confirm("Leave this run and go back to the lobby? Your progress will still save.")) return;
+  }
 
   running = false;
+
   clearInterval(droneTimer);
   clearTimeout(floatingCoinTimer);
   clearTimeout(battleDropTimer);
   clearTimeout(overdriveTimer);
+
   document.body.classList.remove("overdrive-active");
 
-  bestWave = Math.max(bestWave, wave);
-  checkCareerLevelUp();
-  saveImportantChange();
+  if (!leavingPractice) {
+    bestWave = Math.max(bestWave, wave);
+    checkCareerLevelUp();
+    saveImportantChange();
+  }
 
   game.classList.remove("active");
   lobby.classList.add("active");
+
   clearArena();
   updateLobby();
   renderShops();
+
+  const leaveButton = document.getElementById("run-leave");
+
+  if (leaveButton) {
+    leaveButton.classList.remove("tutorial-hidden", "tutorial-leave-ready");
+    leaveButton.textContent = "🚪 LEAVE";
+  }
+
+  if (leavingPractice) {
+    waitingForPracticeLeave = false;
+
+    document.getElementById("practice-mode-badge")?.classList.remove("show");
+
+    setTimeout(() => {
+      showTutorial("lobby");
+    }, 220);
+  }
 });
 
 // ========================================================
