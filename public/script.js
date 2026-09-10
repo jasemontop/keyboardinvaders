@@ -5049,7 +5049,26 @@ function startWave() {
       :
       "NONE";
 
-  document.body.classList.toggle("blackout-wave", currentModifier === "BLACKOUT");
+  const eventThemeClasses = [
+    "event-swarm",
+    "event-fast",
+    "event-armored",
+    "event-bounty",
+    "event-glass",
+    "event-regen",
+    "event-blackout",
+    "event-chaos"
+  ];
+
+  document.body.classList.remove(...eventThemeClasses, "blackout-wave");
+
+  if (currentModifier !== "NONE") {
+    document.body.classList.add(`event-${currentModifier.toLowerCase()}`);
+  }
+
+  if (currentModifier === "BLACKOUT") {
+    document.body.classList.add("blackout-wave");
+  }
 
 
   let amount =
@@ -5430,29 +5449,45 @@ function spawnEnemy(
     boss
   ) {
 
-    const bossPower =
-      1.45 *
+    // Bosses have their own difficulty HP ladder.
+    // Wave 10 is EXACTLY:
+    // Easy 30k, Normal 50k, Hard 100k, Insane 200k.
+    // Every boss after that jumps massively so bosses stay scary
+    // even when the player has a strong build.
+    const firstBossHpByDifficulty = {
+      easy: 30000,
+      normal: 50000,
+      hard: 100000,
+      insane: 200000
+    };
+
+    const firstBossHp =
+      firstBossHpByDifficulty[difficulty.id] ||
+      firstBossHpByDifficulty.normal;
+
+    const laterBossScale =
       Math.pow(
-        1.68,
-        bossNumber - 1
+        3.35,
+        Math.max(0, bossNumber - 1)
       );
 
-
     hp =
-      base.hp *
-      bossPower;
+      Math.round(
+        firstBossHp *
+        laterBossScale
+      );
 
 
     speed =
       base.speed *
       (
-        1.18 +
+        1.22 +
         Math.min(
-          0.55,
+          0.78,
           (
             bossNumber - 1
           ) *
-          0.07
+          0.095
         )
       );
 
@@ -5460,24 +5495,26 @@ function spawnEnemy(
     reward =
       base.reward *
       (
-        2.4 +
+        4 +
         bossNumber *
-        0.9
+        1.7
       );
 
   }
 
 
   // RUN DIFFICULTY
-  if (currentModifier === "GLASS") {
+  if (!boss && currentModifier === "GLASS") {
     hp *= 0.58;
   }
-  if (currentModifier === "REGEN") {
+  if (!boss && currentModifier === "REGEN") {
     hp *= 1.18;
   }
 
   // Reward multiplier is applied on kill so it also affects drone/upgrades consistently.
-  hp *= difficulty.health;
+  if (!boss) {
+    hp *= difficulty.health;
+  }
   speed *= difficulty.speed;
 
 
