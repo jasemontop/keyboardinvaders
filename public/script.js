@@ -1406,13 +1406,66 @@ function applyOnlinePlayer(player) {
   }
 
   const serverOwned = read("owned", "owned", null);
-  if (serverOwned && typeof serverOwned === "object") owned = serverOwned;
+  if (serverOwned && typeof serverOwned === "object") {
+    owned = {
+      guns: Array.isArray(serverOwned.guns)
+        ? serverOwned.guns.filter(id => guns[id])
+        : ["pulse"],
+
+      drones: Array.isArray(serverOwned.drones)
+        ? serverOwned.drones.filter(id => drones[id])
+        : [],
+
+      keyboards: Array.isArray(serverOwned.keyboards)
+        ? serverOwned.keyboards.filter(id => keyboards[id])
+        : ["standard"]
+    };
+  }
+
+  // Starter items must always exist even on older/corrupted saves.
+  if (!owned.guns.includes("pulse")) owned.guns.unshift("pulse");
+  if (!owned.keyboards.includes("standard")) owned.keyboards.unshift("standard");
 
   const serverEquipped = read("equipped", "equipped", null);
-  if (serverEquipped && typeof serverEquipped === "object") equipped = serverEquipped;
+  if (serverEquipped && typeof serverEquipped === "object") {
+    equipped = {
+      gun:
+        serverEquipped.gun && guns[serverEquipped.gun]
+          ? serverEquipped.gun
+          : "pulse",
+
+      drone:
+        serverEquipped.drone && drones[serverEquipped.drone]
+          ? serverEquipped.drone
+          : null,
+
+      keyboard:
+        serverEquipped.keyboard && keyboards[serverEquipped.keyboard]
+          ? serverEquipped.keyboard
+          : "standard",
+
+      keycap:
+        serverEquipped.keycap && keycaps[serverEquipped.keycap]
+          ? serverEquipped.keycap
+          : "standard"
+    };
+  } else {
+    equipped = {
+      gun: "pulse",
+      drone: null,
+      keyboard: "standard",
+      keycap: "standard"
+    };
+  }
 
   const serverKeycaps = read("keycaps", "keycaps", null);
-  if (Array.isArray(serverKeycaps)) ownedKeycaps = serverKeycaps;
+  if (Array.isArray(serverKeycaps)) {
+    ownedKeycaps = serverKeycaps.filter(id => keycaps[id]);
+  }
+
+  if (!ownedKeycaps.includes("standard")) {
+    ownedKeycaps.unshift("standard");
+  }
 
   save(false);
   renderShops();
@@ -4069,9 +4122,7 @@ function startGame() {
 
 
   const board =
-    keyboards[
-      equipped.keyboard
-    ];
+    keyboards[equipped.keyboard] || keyboards.standard;
 
 
   maxHealth =
@@ -4241,9 +4292,7 @@ function applyLoadoutVisuals() {
 
 
   const board =
-    keyboards[
-      equipped.keyboard
-    ];
+    keyboards[equipped.keyboard] || keyboards.standard;
 
 
   if (
@@ -5319,9 +5368,7 @@ function attemptShoot(
 
 
   const gun =
-    guns[
-      equipped.gun
-    ];
+    guns[equipped.gun] || guns.pulse;
 
 
   const now =
@@ -5425,9 +5472,7 @@ function fireGun(
 ) {
 
   const gun =
-    guns[
-      equipped.gun
-    ];
+    guns[equipped.gun] || guns.pulse;
 
 
   const rect =
@@ -8939,22 +8984,28 @@ function updateLobby() {
     rebirths;
 
 
+  const equippedGunData =
+    guns[equipped.gun] || guns.pulse;
+
+  const equippedDroneData =
+    equipped.drone ? drones[equipped.drone] : null;
+
+  const equippedKeyboardData =
+    keyboards[equipped.keyboard] || keyboards.standard;
+
+
   document.getElementById(
     "equipped-gun-name"
   ).textContent =
-    guns[
-      equipped.gun
-    ].name.toUpperCase();
+    equippedGunData.name.toUpperCase();
 
 
   document.getElementById(
     "equipped-drone-name"
   ).textContent =
-    equipped.drone
+    equippedDroneData
       ?
-      drones[
-        equipped.drone
-      ].name.toUpperCase()
+      equippedDroneData.name.toUpperCase()
       :
       "NONE";
 
@@ -8962,9 +9013,7 @@ function updateLobby() {
   document.getElementById(
     "equipped-board-name"
   ).textContent =
-    keyboards[
-      equipped.keyboard
-    ].name.toUpperCase();
+    equippedKeyboardData.name.toUpperCase();
 
 
   document.getElementById(
